@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>萌獸鬥技場 Beast Brawl V9 - Ultimate Overhaul Edition</title>
+<style>
+  :root{
+    --bg:#0b1020;--panel:#171d31;--panel2:#202842;--ink:#f7f5ed;--muted:#aab4cf;
+    --p1:#1cc8ff;--p2:#ff4f8f;--gold:#ffd45c;--good:#58e08f;--bad:#ff6d70;--mp:#8d72ff;
+    --line:rgba(255,255,255,.12);--shadow:0 18px 60px rgba(0,0,0,.35);--display:"Arial Black","Bahnschrift","Trebuchet MS",Inter,sans-serif;--ui:Inter,ui-sans-serif,system-ui,-apple-system,"Noto Sans TC","Microsoft JhengHei",sans-serif;
+  }
+  *{box-sizing:border-box} html,body{margin:0;min-height:100%;background:radial-gradient(circle at 50% 0,#252f56 0,#11172a 42%,#080c18 100%);color:var(--ink);font-family:var(--ui)}
+  button,select{font:inherit} button{touch-action:manipulation}
+  .app{min-height:100vh;display:flex;flex-direction:column}
+  .topbar{height:62px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;border-bottom:1px solid var(--line);background:rgba(8,12,24,.72);backdrop-filter:blur(14px);position:sticky;top:0;z-index:30}
+  .brand{font-family:var(--display);font-weight:1000;letter-spacing:.08em;text-shadow:0 2px 0 rgba(0,0,0,.25)}.brand b{color:var(--gold)}
+  .top-actions{display:flex;gap:8px}.ghost{background:#20273d;border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:8px 11px;cursor:pointer}
+  main{flex:1;width:min(1180px,100%);margin:auto;padding:18px}
+  .screen{display:none}.screen.active{display:block}
+  .hero{padding:28px 0 18px}.eyebrow{font-size:12px;color:var(--gold);font-weight:900;letter-spacing:.18em}.hero h1{font-family:var(--display);font-size:clamp(34px,7vw,82px);line-height:.88;margin:9px 0 12px;text-transform:uppercase;font-style:italic;letter-spacing:-.05em;text-shadow:0 8px 0 rgba(0,0,0,.25)}
+  .hero p{color:var(--muted);max-width:720px;line-height:1.7;margin:0}
+  .setup-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.panel{background:linear-gradient(180deg,rgba(32,40,66,.95),rgba(18,23,40,.95));border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);overflow:hidden}
+  .panel-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line)}.panel-head h2{font-size:16px;margin:0;font-family:var(--display);letter-spacing:.03em}.badge{font-weight:1000;font-size:12px;padding:5px 8px;border-radius:999px}.p1b{background:var(--p1);color:#00141a}.p2b{background:var(--p2);color:#20000d}
+  .mode-row{display:flex;gap:10px;margin:16px 0}.mode{flex:1;padding:12px;background:#151b2f;color:var(--ink);border:1px solid var(--line);border-radius:12px;cursor:pointer;font-weight:850}.mode.active{outline:2px solid var(--gold);background:#282133}
+  .roster{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;padding:14px}.char-card{background:#11182b;border:1px solid var(--line);border-radius:14px;padding:8px;cursor:pointer;min-width:0;position:relative;transition:.18s transform,.18s border-color}.char-card:hover{transform:translateY(-2px)}.char-card.selected{border-color:var(--gold);box-shadow:0 0 0 2px rgba(255,212,92,.18) inset}.portrait{height:106px;border-radius:10px;display:grid;place-items:center;overflow:hidden;background:radial-gradient(circle at 50% 20%,rgba(255,255,255,.12),rgba(0,0,0,.18))}.portrait svg{width:110px;height:110px}.char-card h3{font-size:12px;margin:8px 0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.char-card small{font-size:10px;color:var(--muted)}
+  .fighter-detail{display:grid;grid-template-columns:170px 1fr;gap:16px;padding:16px}.big-portrait{height:190px;display:grid;place-items:center;border-radius:14px;background:radial-gradient(circle at 50% 20%,rgba(255,255,255,.14),rgba(0,0,0,.12));border:1px solid var(--line)}.big-portrait svg{width:185px;height:185px}
+  .detail h3{margin:0;font-size:25px;font-family:var(--display);letter-spacing:.01em}.job{color:var(--gold);font-weight:900}.passive{margin:7px 0 10px;color:var(--muted);font-size:13px;line-height:1.5}.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:7px}.stat{background:#101629;border-radius:10px;padding:8px}.stat b{display:block;font-size:16px}.stat span{font-size:10px;color:var(--muted)}.palette-row{display:flex;gap:8px;align-items:center;margin-top:12px}.palette{border:1px solid var(--line);background:#101629;color:var(--ink);padding:7px 10px;border-radius:9px;cursor:pointer}.palette.active{outline:2px solid var(--gold)}
+  .start-row{display:flex;gap:10px;justify-content:flex-end;margin-top:16px}.cta{border:0;border-radius:12px;padding:13px 20px;background:linear-gradient(135deg,#ffd45c,#ff9e41);color:#231100;font-weight:1000;cursor:pointer;box-shadow:0 9px 24px rgba(255,166,70,.25)}
+  .battle-wrap{min-height:calc(100vh - 100px);display:flex;flex-direction:column;gap:12px}.hud{display:grid;grid-template-columns:1fr auto 1fr;gap:14px;align-items:center}.hud-side{background:rgba(14,18,32,.92);border:1px solid var(--line);border-radius:14px;padding:11px 12px}.hud-side.right{text-align:right}.fighter-name{font-weight:1000;font-size:15px}.bars{display:grid;gap:6px;margin-top:7px}.bar{height:17px;background:#0a0f1e;border-radius:99px;overflow:hidden;border:1px solid rgba(255,255,255,.08);position:relative}.fill{height:100%;width:100%;transition:width .45s ease}.hpfill{background:linear-gradient(90deg,#45df87,#b9f36b)}.mpfill{background:linear-gradient(90deg,#6d5af7,#b17cff)}.right .fill{margin-left:auto}.bar-label{position:absolute;inset:0;display:grid;place-items:center;font-size:10px;font-weight:1000;text-shadow:0 1px 2px #000}.round-box{text-align:center;min-width:115px}.round-box .round{font-family:var(--display);font-weight:1000;color:var(--gold);font-size:12px}.round-box .turn{font-family:var(--display);font-size:20px;font-weight:1000;letter-spacing:.04em}
+  .stage{height:520px;position:relative;overflow:hidden;border-radius:19px;border:1px solid var(--line);box-shadow:var(--shadow);background:linear-gradient(#101a36 0 46%,#6c3e7c 46% 49%,#1a2a46 49% 56%,#0d1822 56%)}
+  .moon{position:absolute;width:170px;height:170px;border-radius:50%;background:#ffe59b;box-shadow:0 0 50px rgba(255,225,150,.35);left:50%;top:35px;transform:translateX(-50%)}.stage::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 16%,rgba(160,110,255,.18),transparent 28%),radial-gradient(circle at 20% 26%,rgba(70,215,255,.12),transparent 24%),linear-gradient(180deg,rgba(255,255,255,.04),transparent 18%,transparent 82%,rgba(255,255,255,.03));pointer-events:none}.stage::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(180deg,rgba(255,255,255,.02) 0 2px,transparent 2px 6px);mix-blend-mode:soft-light;opacity:.34;pointer-events:none}.city{position:absolute;left:0;right:0;bottom:120px;height:130px;background:repeating-linear-gradient(90deg,transparent 0 38px,rgba(0,0,0,.5) 39px 68px),linear-gradient(0deg,#0b1321,#1b2b42);clip-path:polygon(0 25%,7% 25%,7% 0,13% 0,13% 38%,20% 38%,20% 10%,27% 10%,27% 35%,34% 35%,34% 3%,42% 3%,42% 27%,49% 27%,49% 12%,55% 12%,55% 32%,62% 32%,62% 0,71% 0,71% 40%,79% 40%,79% 16%,86% 16%,86% 30%,94% 30%,94% 5%,100% 5%,100% 100%,0 100%)}
+  .floor{position:absolute;left:-10%;right:-10%;bottom:-30px;height:190px;background:repeating-linear-gradient(90deg,rgba(255,255,255,.04) 0 2px,transparent 2px 70px),repeating-linear-gradient(0deg,rgba(255,255,255,.04) 0 2px,transparent 2px 50px),linear-gradient(#233246,#0c111b);transform:perspective(400px) rotateX(52deg);transform-origin:bottom}.versus{position:absolute;top:18px;left:50%;transform:translateX(-50%);font-size:58px;font-weight:1000;font-style:italic;font-family:var(--display);color:rgba(255,255,255,.08)}
+  .fighter{position:absolute;bottom:78px;width:300px;height:320px;display:grid;place-items:end center;transition:transform .25s ease,filter .2s}.fighter.left{left:7%}.fighter.right{right:7%;transform:scaleX(-1)}.fighter svg{width:280px;height:280px;filter:drop-shadow(0 16px 10px rgba(0,0,0,.36)) drop-shadow(0 6px 20px rgba(0,0,0,.12));transform-origin:50% 90%;transform-box:fill-box;will-change:transform,filter,opacity;image-rendering:auto}.fighter.right .nameplate{transform:scaleX(-1)}.nameplate{position:absolute;bottom:-1px;background:rgba(0,0,0,.65);border:1px solid var(--line);padding:7px 14px;border-radius:99px;font-weight:900;font-size:12px;font-family:var(--display);letter-spacing:.03em}
+  /* V9: plush-inspired character rendering + ultimate cinematic action presentation */
+  .fighter{--poseGlow:rgba(255,225,120,.75)}
+  .fighter svg{transition:transform .16s cubic-bezier(.2,.8,.22,1),filter .16s cubic-bezier(.2,.8,.22,1),opacity .18s ease}
+  .fighter.pose-idle svg{animation:idleBase 1.65s ease-in-out infinite}
+  .fighter[data-char="bear"].pose-idle svg{animation:bearIdle 1.55s ease-in-out infinite}
+  .fighter[data-char="elephant"].pose-idle svg{animation:elephantIdle 1.9s ease-in-out infinite}
+  .fighter[data-char="panda"].pose-idle svg{animation:pandaIdle 1.45s ease-in-out infinite}
+  .fighter[data-char="hummingbird"].pose-idle svg{animation:hummingbirdIdle .34s ease-in-out infinite}
+  .fighter[data-char="orca"].pose-idle svg{animation:orcaIdle 1.35s ease-in-out infinite}
+  .fighter[data-char="jelly"].pose-idle svg{animation:jellyIdle 1.7s ease-in-out infinite}
+  .fighter.pose-ready svg{transform:translateY(7px) scale(.97)}
+  .fighter.pose-charge svg{filter:drop-shadow(0 0 25px var(--poseGlow));transform:translateY(-5px) scale(1.07)}
+  .fighter.pose-release svg{transform:translateX(34px) rotate(-4deg) scale(1.09);filter:drop-shadow(0 0 26px var(--poseGlow))}
+  .fighter.pose-strike svg{transform:translateX(54px) translateY(-8px) scale(1.1);filter:brightness(1.16) drop-shadow(0 0 28px var(--poseGlow))}
+  .fighter.pose-recover svg{transform:translateY(3px) scale(1.01)}
+  .fighter.pose-hit svg{animation:hitV4 .34s ease}
+  .fighter.pose-guard svg{animation:guardV4 .58s ease}
+  .fighter.pose-ko svg{animation:koV4 .92s cubic-bezier(.22,.9,.32,1) forwards}
+  .fighter.pose-victory svg{animation:victoryBase .82s ease-in-out infinite alternate}
+  .fighter.low-hp.pose-idle svg{animation-duration:.72s;filter:drop-shadow(0 0 11px rgba(255,90,90,.42))}
+  .fighter[data-char="bear"].pose-charge svg{transform:translateY(-14px) rotate(3deg) scale(1.09);--poseGlow:rgba(255,100,40,.9)}
+  .fighter[data-char="bear"].pose-release svg{transform:translateX(24px) translateY(-12px) rotate(-8deg) scale(1.11)}
+  .fighter[data-char="bear"].pose-victory svg{animation:bearVictory .75s ease-in-out infinite alternate}
+  .fighter[data-char="elephant"].pose-ready svg{transform:translateY(10px) rotate(-2deg) scale(.98)}
+  .fighter[data-char="elephant"].pose-charge svg{transform:translateX(-10px) scale(1.04);--poseGlow:rgba(85,205,255,.9)}
+  .fighter[data-char="elephant"].pose-release svg{transform:translateX(18px) rotate(5deg) scale(1.06)}
+  .fighter[data-char="elephant"].pose-strike svg{transform:translateX(31px) rotate(7deg) scale(1.07)}
+  .fighter[data-char="elephant"].pose-victory svg{animation:elephantVictory 1s ease-in-out infinite alternate}
+  .fighter[data-char="panda"].pose-ready svg{transform:translateY(8px) rotate(-6deg) scale(.96)}
+  .fighter[data-char="panda"].pose-charge svg{transform:translateX(-18px) skewX(-7deg) scale(1.02);--poseGlow:rgba(138,226,111,.95)}
+  .fighter[data-char="panda"].pose-release svg{animation:pandaDash .18s steps(2,end) infinite alternate}
+  .fighter[data-char="panda"].pose-strike svg{transform:translateX(92px) skewX(-12deg) scale(1.04);filter:drop-shadow(-26px 0 0 rgba(133,230,111,.24)) drop-shadow(-52px 0 0 rgba(133,230,111,.12))}
+  .fighter[data-char="panda"].pose-victory svg{animation:pandaVictory 1.5s ease-in-out infinite alternate}
+  .fighter[data-char="hummingbird"].pose-ready svg{transform:translateY(-8px) rotate(7deg) scale(.94)}
+  .fighter[data-char="hummingbird"].pose-charge svg{transform:translateY(-24px) rotate(-12deg) scale(1.08);--poseGlow:rgba(255,206,78,.95)}
+  .fighter[data-char="hummingbird"].pose-release svg{transform:translateX(34px) translateY(-30px) rotate(13deg) scale(1.12)}
+  .fighter[data-char="hummingbird"].pose-strike svg{animation:hummingbirdSmash .16s ease both}
+  .fighter[data-char="hummingbird"].pose-victory svg{animation:hummingbirdVictory .48s ease-in-out infinite alternate}
+  .fighter[data-char="orca"].pose-ready svg{transform:rotate(-4deg) translateY(6px)}
+  .fighter[data-char="orca"].pose-charge svg{transform:translateY(-10px) rotate(5deg) scale(1.05);--poseGlow:rgba(111,206,255,.95)}
+  .fighter[data-char="orca"].pose-release svg{transform:translateX(18px) rotate(-7deg) scale(1.06)}
+  .fighter[data-char="orca"].pose-strike svg{transform:translateX(30px) rotate(7deg) scale(1.08)}
+  .fighter[data-char="orca"].pose-victory svg{animation:orcaVictory .75s ease-in-out infinite alternate}
+  .fighter[data-char="jelly"].pose-ready svg{transform:translateY(9px) scale(.96)}
+  .fighter[data-char="jelly"].pose-charge svg{transform:translateY(-12px) scale(1.1);--poseGlow:rgba(123,220,255,.95)}
+  .fighter[data-char="jelly"].pose-release svg{transform:translateX(18px) translateY(-10px) scale(1.09)}
+  .fighter[data-char="jelly"].pose-strike svg{transform:translateX(28px) scale(1.12);filter:brightness(1.18) drop-shadow(0 0 30px rgba(120,220,255,.9))}
+  .fighter[data-char="jelly"].pose-victory svg{animation:jellyVictory 1.05s ease-in-out infinite alternate}
+  .fighter .expression{position:absolute;z-index:4;left:50%;top:58px;width:72px;height:43px;transform:translateX(-50%);pointer-events:none;opacity:0;transition:opacity .1s ease}.fighter .expression i{position:absolute;top:8px;width:15px;height:7px;border:4px solid #11131a;border-top:0;border-left:0;border-right:0;border-radius:50%}.fighter .expression i:first-child{left:12px}.fighter .expression i:nth-child(2){right:12px}.fighter .expression b{position:absolute;left:50%;bottom:3px;width:26px;height:12px;transform:translateX(-50%);border-bottom:4px solid #11131a;border-radius:0 0 50% 50%}
+  .fighter.pose-hit .expression,.fighter.pose-ko .expression,.fighter.pose-victory .expression,.fighter.pose-charge .expression,.fighter.pose-strike .expression{opacity:1}
+  .fighter.pose-hit .expression i,.fighter.pose-ko .expression i{height:14px;border-bottom:0}.fighter.pose-hit .expression i:first-child,.fighter.pose-ko .expression i:first-child{transform:rotate(38deg);border-bottom:4px solid #11131a}.fighter.pose-hit .expression i:nth-child(2),.fighter.pose-ko .expression i:nth-child(2){transform:rotate(-38deg);border-bottom:4px solid #11131a}.fighter.pose-hit .expression b,.fighter.pose-ko .expression b{border-bottom:0;border-top:4px solid #11131a;border-radius:50% 50% 0 0;bottom:1px}
+  .fighter.pose-victory .expression i{border-bottom:4px solid #11131a;height:10px}.fighter.pose-victory .expression b{height:14px;border-bottom-width:5px}
+  .fighter .pose-icon{position:absolute;z-index:6;left:50%;top:9px;transform:translateX(-50%);font-size:34px;opacity:0;filter:drop-shadow(0 3px 5px rgba(0,0,0,.55));pointer-events:none}.fighter.pose-charge .pose-icon,.fighter.pose-strike .pose-icon,.fighter.pose-victory .pose-icon{opacity:1;animation:iconPulse .45s ease-in-out infinite alternate}
+  .fighter[data-char="bear"] .pose-icon::before{content:'🔥'}.fighter[data-char="elephant"] .pose-icon::before{content:'💨'}.fighter[data-char="panda"] .pose-icon::before{content:'✦'}.fighter[data-char="hummingbird"] .pose-icon::before{content:'🔨'}.fighter[data-char="orca"] .pose-icon::before{content:'♫'}.fighter[data-char="jelly"] .pose-icon::before{content:'🛡️'}
+  .stage.shake{animation:stageShake .22s linear}.stage-banner{position:absolute;z-index:25;left:50%;top:43%;transform:translate(-50%,-50%) skewX(-8deg);font-size:clamp(42px,8vw,88px);line-height:.82;font-weight:1000;font-style:italic;text-align:center;text-shadow:0 9px 0 rgba(0,0,0,.42),0 0 28px rgba(255,212,92,.35);pointer-events:none;animation:bannerIn .72s ease forwards}.stage-banner small{display:block;font-size:.24em;letter-spacing:.22em;color:var(--gold);margin-top:18px}.stage-banner.ko{color:#ff6d70;font-size:clamp(64px,11vw,124px)}
+  @keyframes idleBase{0%{transform:translateY(0) rotate(0)}25%{transform:translateY(-2px) rotate(-.4deg)}50%{transform:translateY(-5px) rotate(.5deg)}75%{transform:translateY(-2px) rotate(.2deg)}100%{transform:translateY(0) rotate(0)}}
+  @keyframes bearIdle{0%{transform:translateY(0) rotate(-1deg)}20%{transform:translateY(-3px) rotate(-.4deg)}50%{transform:translateY(-7px) rotate(1deg)}80%{transform:translateY(-2px) rotate(.3deg)}100%{transform:translateY(0) rotate(-1deg)}}
+  @keyframes elephantIdle{0%{transform:translateY(0) rotate(0)}30%{transform:translateY(-2px) rotate(.8deg)}60%{transform:translateY(-4px) rotate(1.3deg)}100%{transform:translateY(0) rotate(0)}}
+  @keyframes pandaIdle{0%{transform:translateY(2px) rotate(-2deg)}25%{transform:translateY(1px) rotate(-1deg)}50%{transform:translateY(-4px) rotate(1deg)}75%{transform:translateY(-1px) rotate(.2deg)}100%{transform:translateY(2px) rotate(-2deg)}}
+  @keyframes hummingbirdIdle{0%{transform:translateY(-7px) rotate(-2deg)}25%{transform:translateY(-11px) rotate(1deg)}50%{transform:translateY(-13px) rotate(2deg)}75%{transform:translateY(-10px) rotate(-1deg)}100%{transform:translateY(-7px) rotate(-2deg)}}
+  @keyframes orcaIdle{0%{transform:rotate(-2deg) translateY(2px)}25%{transform:rotate(-.5deg) translateY(-1px)}50%{transform:rotate(2deg) translateY(-6px)}75%{transform:rotate(.4deg) translateY(-2px)}100%{transform:rotate(-2deg) translateY(2px)}}
+  @keyframes jellyIdle{0%{transform:translateY(3px) scaleX(1)}25%{transform:translateY(0) scaleX(1.01)}50%{transform:translateY(-7px) scaleX(1.03)}75%{transform:translateY(-2px) scaleX(.99)}100%{transform:translateY(3px) scaleX(1)}}
+  @keyframes pandaDash{from{transform:translateX(35px) skewX(-11deg)}to{transform:translateX(64px) skewX(-15deg)}}
+  @keyframes hummingbirdSmash{0%{transform:translateX(30px) translateY(-38px) rotate(14deg) scale(1.1)}100%{transform:translateX(62px) translateY(8px) rotate(-14deg) scale(1.12)}}
+  @keyframes hitV4{0%{transform:none;filter:brightness(1)}22%{transform:translateX(-20px) rotate(-9deg);filter:brightness(2.2) saturate(.3)}54%{transform:translateX(13px) rotate(6deg)}100%{transform:none}}
+  @keyframes guardV4{0%,100%{transform:none}45%{transform:scale(.9) translateY(10px);filter:brightness(1.5) saturate(.6)}}
+  @keyframes koV4{0%{transform:none;opacity:1}45%{transform:translateY(-14px) rotate(11deg);opacity:1}100%{transform:translateY(92px) rotate(-28deg) scale(.92);opacity:.3}}
+  @keyframes victoryBase{from{transform:translateY(0) scale(1.03)}to{transform:translateY(-14px) scale(1.08)}}
+  @keyframes bearVictory{from{transform:translateY(-5px) rotate(-5deg) scale(1.05)}to{transform:translateY(-18px) rotate(6deg) scale(1.1);filter:drop-shadow(0 0 22px rgba(255,104,45,.8))}}
+  @keyframes elephantVictory{from{transform:rotate(-3deg) scale(1.02)}to{transform:translateY(-8px) rotate(5deg) scale(1.06)}}
+  @keyframes pandaVictory{from{transform:rotate(-3deg) translateY(5px) scale(1)}to{transform:rotate(3deg) translateY(12px) scale(.98)}}
+  @keyframes hummingbirdVictory{from{transform:translateY(-8px) rotate(-8deg) scale(1.04)}to{transform:translateY(-25px) rotate(9deg) scale(1.12)}}
+  @keyframes orcaVictory{from{transform:translateY(0) rotate(-6deg) scale(1.03)}to{transform:translateY(-12px) rotate(7deg) scale(1.08)}}
+  @keyframes jellyVictory{from{transform:translateY(2px) scale(.98)}to{transform:translateY(-16px) scale(1.1);filter:drop-shadow(0 0 22px rgba(126,224,255,.8))}}
+  @keyframes iconPulse{from{transform:translateX(-50%) translateY(4px) scale(.9)}to{transform:translateX(-50%) translateY(-5px) scale(1.13)}}
+  @keyframes stageShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}50%{transform:translateX(7px)}75%{transform:translateX(-4px)}}
+  @keyframes bannerIn{0%{opacity:0;transform:translate(-50%,-50%) scale(.45) skewX(-8deg)}28%{opacity:1;transform:translate(-50%,-50%) scale(1.13) skewX(-8deg)}72%{opacity:1}100%{opacity:0;transform:translate(-50%,-50%) scale(1.02) skewX(-8deg)}}
+  .fx{position:absolute;pointer-events:none;z-index:12}.fx-text{font-size:36px;font-weight:1000;font-style:italic;text-shadow:0 5px 0 rgba(0,0,0,.35);animation:floatUp .85s ease forwards}.fx-hit{font-size:70px;animation:pop .55s ease forwards}.p1fx{color:var(--p1)}.p2fx{color:var(--p2)}.damage{color:#fff}.heal{color:var(--good)}.miss{color:#d7d9e3}.crit{color:var(--gold)}
+  @keyframes floatUp{from{opacity:0;transform:translateY(20px) scale(.8)}30%{opacity:1}to{opacity:0;transform:translateY(-48px) scale(1.08)}}@keyframes pop{0%{opacity:0;transform:scale(.2) rotate(-12deg)}45%{opacity:1;transform:scale(1.15) rotate(3deg)}100%{opacity:0;transform:scale(.8)}}
+  .sequence-layer{position:absolute;inset:0;z-index:11;pointer-events:none;overflow:hidden;mix-blend-mode:screen}.sequence-layer svg{width:100%;height:100%;display:block;filter:drop-shadow(0 0 10px rgba(255,255,255,.08))}.frame-callout{position:absolute;left:50%;top:11%;transform:translateX(-50%);padding:8px 14px;border-radius:999px;background:rgba(3,7,16,.62);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.2);font-size:12px;font-weight:1000;font-family:var(--display);letter-spacing:.14em;color:#fff;white-space:nowrap;animation:frameFlash .16s ease;box-shadow:0 10px 22px rgba(0,0,0,.22)}.fighter.frame-1,.fighter.frame-2,.fighter.frame-3,.fighter.frame-4,.fighter.frame-5{z-index:5}
+  @keyframes frameFlash{from{opacity:.25;transform:translateX(-50%) scale(.92)}to{opacity:1;transform:translateX(-50%) scale(1)}}
+  .afterimage{position:absolute;pointer-events:none;z-index:4;opacity:.22;animation:afterTrail .34s ease-out forwards;mix-blend-mode:screen;filter:blur(.2px) saturate(1.18)}.afterimage .nameplate,.afterimage .expression,.afterimage .pose-icon{opacity:0!important}.afterimage svg{filter:drop-shadow(0 0 18px rgba(255,255,255,.15)) saturate(1.14)}
+  .fx-flash{position:absolute;inset:0;pointer-events:none;z-index:9;animation:flashFade .28s ease-out forwards;mix-blend-mode:screen}.speed-sweep{position:absolute;top:16%;bottom:16%;width:42%;pointer-events:none;z-index:10;opacity:.55;filter:blur(2px);animation:sweepPass .36s cubic-bezier(.15,.82,.24,1) forwards}.speed-sweep.left{left:-45%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.06),rgba(255,255,255,.26),transparent)}.speed-sweep.right{right:-45%;background:linear-gradient(270deg,transparent,rgba(255,255,255,.06),rgba(255,255,255,.26),transparent)}
+  .impact-burst{position:absolute;width:124px;height:124px;border-radius:50%;pointer-events:none;z-index:13;animation:impactBurst .42s cubic-bezier(.14,.88,.31,1) forwards;mix-blend-mode:screen}.impact-burst::before,.impact-burst::after{content:'';position:absolute;inset:0;border-radius:50%;border:3px solid rgba(255,255,255,.72)}.impact-burst::after{inset:18px;border-width:7px;border-style:dashed;opacity:.68}.combo-tag{position:absolute;z-index:14;padding:7px 10px;border-radius:999px;background:rgba(7,10,18,.72);border:1px solid rgba(255,255,255,.22);color:#fff;font-size:11px;font-weight:1000;letter-spacing:.14em;animation:comboRise .55s ease-out forwards;pointer-events:none;backdrop-filter:blur(6px);font-family:var(--display)}
+  .cinematic-cutin{position:absolute;inset:0;z-index:22;pointer-events:none;opacity:0;display:grid;align-items:center;padding:22px 24px;overflow:hidden}.cinematic-cutin::before{content:'';position:absolute;inset:0;background:linear-gradient(115deg,rgba(8,13,24,.08),rgba(8,13,24,.76) 24%,rgba(8,13,24,.15) 68%,rgba(8,13,24,.84));}.cinematic-cutin::after{content:'';position:absolute;inset:-30% -20%;background:repeating-linear-gradient(120deg,transparent 0 18px,rgba(255,255,255,.06) 18px 26px,transparent 26px 54px);transform:translateX(-20%) skewX(-18deg);opacity:.8;animation:cutinStripe .9s linear infinite}
+  .cinematic-cutin.right::before{background:linear-gradient(245deg,rgba(8,13,24,.08),rgba(8,13,24,.76) 24%,rgba(8,13,24,.15) 68%,rgba(8,13,24,.84))}
+  .cinematic-cutin.show{animation:cutinWrapIn .16s ease forwards}.cinematic-cutin.hide{animation:cutinWrapOut .22s ease forwards}
+  .cutin-card{position:relative;z-index:1;width:min(82%,760px);display:grid;grid-template-columns:240px 1fr;gap:16px;align-items:center;padding:20px 22px;border:1px solid rgba(255,255,255,.18);border-radius:22px;background:linear-gradient(135deg,rgba(29,37,63,.94),rgba(13,18,33,.88));box-shadow:0 16px 46px rgba(0,0,0,.45);transform:translateX(-44px) skewX(-8deg) scale(.96);opacity:0}.cinematic-cutin.right .cutin-card{margin-left:auto;transform:translateX(44px) skewX(8deg) scale(.96)}
+  .cinematic-cutin.show .cutin-card{animation:cutinCardIn .56s cubic-bezier(.16,.92,.24,1) forwards}.cinematic-cutin.hide .cutin-card{animation:cutinCardOut .22s ease forwards}
+  .cutin-art{height:196px;display:grid;place-items:center;border-radius:18px;background:radial-gradient(circle at 50% 18%,rgba(255,255,255,.14),rgba(255,255,255,.02) 42%,rgba(0,0,0,.16));overflow:hidden}.cutin-art svg{width:194px;height:194px;filter:drop-shadow(0 10px 14px rgba(0,0,0,.35))}.cutin-meta{display:grid;gap:7px}.cutin-ribbon{justify-self:start;padding:5px 11px;border-radius:999px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.15);font-size:11px;font-weight:1000;letter-spacing:.18em;color:var(--gold);font-family:var(--display)}.cutin-name{font-size:clamp(30px,4vw,56px);line-height:.9;font-weight:1000;font-style:italic;letter-spacing:-.04em;text-shadow:0 6px 0 rgba(0,0,0,.24);font-family:var(--display)}.cutin-sub{font-size:14px;color:#dfe8ff;font-weight:800;letter-spacing:.08em}.cutin-desc{font-size:12px;color:var(--muted);line-height:1.55;max-width:40ch}
+  .stage.zoom-left{animation:stageFocusLeft .64s cubic-bezier(.17,.82,.22,1)}.stage.zoom-right{animation:stageFocusRight .64s cubic-bezier(.17,.82,.22,1)}.stage.ko-freeze{animation:koFreeze .54s cubic-bezier(.12,.82,.2,1)}
+  @keyframes afterTrail{0%{opacity:.24;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(4px) scale(.98)}}
+  @keyframes flashFade{0%{opacity:0}18%{opacity:1}100%{opacity:0}}
+  @keyframes sweepPass{0%{transform:translateX(0) skewX(-18deg)}100%{transform:translateX(360%) skewX(-18deg);opacity:0}}
+  @keyframes impactBurst{0%{opacity:0;transform:scale(.25)}32%{opacity:1;transform:scale(1.05)}100%{opacity:0;transform:scale(1.55)}}
+  @keyframes comboRise{0%{opacity:0;transform:translateY(16px) scale(.82)}30%{opacity:1}100%{opacity:0;transform:translateY(-32px) scale(1.05)}}
+  @keyframes cutinWrapIn{from{opacity:0}to{opacity:1}} @keyframes cutinWrapOut{from{opacity:1}to{opacity:0}} @keyframes cutinCardIn{0%{opacity:0;transform:translateX(-44px) skewX(-8deg) scale(.96)}38%{opacity:1}100%{opacity:1;transform:translateX(0) skewX(-8deg) scale(1)}} .cinematic-cutin.right.show .cutin-card{animation:cutinCardInRight .56s cubic-bezier(.16,.92,.24,1) forwards} @keyframes cutinCardInRight{0%{opacity:0;transform:translateX(44px) skewX(8deg) scale(.96)}38%{opacity:1}100%{opacity:1;transform:translateX(0) skewX(8deg) scale(1)}} @keyframes cutinCardOut{from{opacity:1}to{opacity:0;transform:scale(.98)}} @keyframes cutinStripe{from{transform:translateX(-18%) skewX(-18deg)}to{transform:translateX(18%) skewX(-18deg)}}
+  @keyframes stageFocusLeft{0%{transform:scale(1)}35%{transform:translateX(10px) scale(1.03)}100%{transform:scale(1)}} @keyframes stageFocusRight{0%{transform:scale(1)}35%{transform:translateX(-10px) scale(1.03)}100%{transform:scale(1)}} @keyframes koFreeze{0%{transform:scale(1);filter:brightness(1)}35%{transform:scale(1.025);filter:brightness(1.26)}100%{transform:scale(1);filter:brightness(1)}}
+  .battle-bottom{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:12px}.commands{background:#151b2d;border:1px solid var(--line);border-radius:16px;padding:12px}.command-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}.command-title{font-weight:1000;font-family:var(--display);letter-spacing:.03em}.command-sub{font-size:12px;color:var(--muted)}.cmd-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}.cmd{min-height:82px;background:linear-gradient(#202944,#151b2e);color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:8px;cursor:pointer;text-align:left;position:relative}.cmd:hover:not(:disabled){border-color:var(--gold);transform:translateY(-1px)}.cmd:disabled{opacity:.4;cursor:not-allowed}.cmd b{display:block;font-size:12px;font-family:var(--display);letter-spacing:.02em}.cmd small{display:block;color:var(--muted);font-size:10px;margin-top:3px;line-height:1.25}.cost{position:absolute;right:6px;top:6px;background:rgba(141,114,255,.25);color:#d8d0ff;border-radius:99px;padding:2px 5px;font-size:9px;font-weight:900}
+  .log{background:#0e1424;border:1px solid var(--line);border-radius:16px;padding:12px;height:150px;overflow:auto}.log h3{font-size:12px;margin:0 0 7px;color:var(--gold)}.log-entry{font-size:11px;color:#c7cede;line-height:1.45;padding:3px 0;border-bottom:1px dashed rgba(255,255,255,.06)}
+  .overlay{position:fixed;inset:0;background:rgba(4,7,15,.78);backdrop-filter:blur(8px);display:none;place-items:center;z-index:50;padding:18px}.overlay.show{display:grid}.modal{width:min(540px,100%);background:#182038;border:1px solid var(--line);border-radius:20px;padding:24px;box-shadow:var(--shadow);text-align:center}.modal h2{font-size:42px;margin:0 0 8px}.modal p{color:var(--muted);line-height:1.6}.modal-actions{display:flex;gap:10px;justify-content:center;margin-top:18px}.secondary{background:#242d49;border:1px solid var(--line);color:var(--ink);border-radius:11px;padding:11px 15px;cursor:pointer}.ref{text-align:left;font-size:13px}.ref a{color:#7cdfff;word-break:break-all}.ref li{margin:10px 0}.copyright{font-size:11px;color:var(--muted);margin-top:12px}
+  .waiting{display:none;color:var(--gold);font-weight:900;padding:7px 10px;background:#2a2340;border-radius:10px}.waiting.show{display:inline-block}
+  @media(max-width:900px){.setup-grid{grid-template-columns:1fr}.roster{grid-template-columns:repeat(3,minmax(88px,1fr))}.fighter-detail{grid-template-columns:125px 1fr}.big-portrait{height:150px}.big-portrait svg{width:145px;height:145px}.stats{grid-template-columns:repeat(2,1fr)}.stage{height:410px}.fighter{width:220px;height:250px;bottom:64px}.fighter svg{width:210px;height:210px}.fighter.left{left:2%}.fighter.right{right:2%}.battle-bottom{grid-template-columns:1fr}.cmd-grid{grid-template-columns:repeat(3,1fr)}.log{height:120px}.hud{gap:5px}.hud-side{padding:8px}.round-box{min-width:70px}.round-box .turn{font-size:14px}.fighter-name{font-size:12px}.cutin-card{width:min(90%,560px);grid-template-columns:150px 1fr;padding:14px}.cutin-art{height:132px}.cutin-art svg{width:128px;height:128px}.cutin-name{font-size:28px}}
+  @media(max-width:540px){main{padding:10px}.topbar{padding:0 10px}.brand{font-size:13px}.hero{padding-top:16px}.hero h1{font-size:42px}.fighter-detail{grid-template-columns:1fr}.big-portrait{height:150px}.detail h3{font-size:20px}.stage{height:340px}.moon{width:120px;height:120px}.fighter{width:160px;height:188px;bottom:55px}.fighter svg{width:156px;height:156px}.fighter.left{left:-1%}.fighter.right{right:-1%}.cmd-grid{grid-template-columns:repeat(2,1fr)}.cmd{min-height:72px}.hud-side{min-width:0}.fighter-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bar{height:14px}.round-box .round{font-size:10px}.versus{font-size:42px}.cutin-card{width:100%;grid-template-columns:1fr;gap:10px;padding:12px 12px 14px}.cutin-art{height:112px}.cutin-art svg{width:108px;height:108px}.cutin-meta{gap:5px}.cutin-ribbon{font-size:10px}.cutin-sub,.cutin-desc{font-size:11px}.cinematic-cutin{padding:12px}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar"><div class="brand">BEAST <b>BRAWL</b> // TURN FIGHTER</div><div class="top-actions"><button id="btnRef" class="ghost">Reference</button><button id="btnReset" class="ghost">重新選角</button></div></header>
+  <main>
+    <section id="selectScreen" class="screen active">
+      <div class="hero"><div class="eyebrow">ARCADE LOOK × TURN-BASED MIND GAME · V9 ULTIMATE OVERHAUL EDITION</div><h1>萌獸<br>鬥技場</h1><p>外觀是 2D 街機格鬥，操作改成每回合選擇行動。雙方各決定一個指令後，依速度與技能優先度結算。先把對手 HP 歸零就獲勝。</p></div>
+      <div class="mode-row"><button class="mode active" data-mode="cpu">1P vs CPU</button><button class="mode" data-mode="local">1P vs 2P 雙人同機</button></div>
+      <div class="setup-grid">
+        <div class="panel"><div class="panel-head"><h2>選擇左側角色</h2><span class="badge p1b">1P / CYAN</span></div><div id="p1Roster" class="roster"></div><div id="p1Detail" class="fighter-detail"></div></div>
+        <div class="panel"><div class="panel-head"><h2>選擇右側角色</h2><span class="badge p2b" id="p2Badge">CPU / MAGENTA</span></div><div id="p2Roster" class="roster"></div><div id="p2Detail" class="fighter-detail"></div></div>
+      </div>
+      <div class="start-row"><button id="startBtn" class="cta">FIGHT! 開始對戰</button></div>
+    </section>
+
+    <section id="battleScreen" class="screen">
+      <div class="battle-wrap">
+        <div class="hud">
+          <div class="hud-side"><div id="p1HudName" class="fighter-name"></div><div class="bars"><div class="bar"><div id="p1Hp" class="fill hpfill"></div><span id="p1HpTxt" class="bar-label"></span></div><div class="bar"><div id="p1Mp" class="fill mpfill"></div><span id="p1MpTxt" class="bar-label"></span></div></div></div>
+          <div class="round-box"><div id="roundLabel" class="round">ROUND 1</div><div id="phaseLabel" class="turn">COMMAND</div></div>
+          <div class="hud-side right"><div id="p2HudName" class="fighter-name"></div><div class="bars"><div class="bar"><div id="p2Hp" class="fill hpfill"></div><span id="p2HpTxt" class="bar-label"></span></div><div class="bar"><div id="p2Mp" class="fill mpfill"></div><span id="p2MpTxt" class="bar-label"></span></div></div></div>
+        </div>
+        <div id="stage" class="stage"><div class="moon"></div><div class="city"></div><div class="floor"></div><div class="versus">VS</div><div id="fighter1" class="fighter left"></div><div id="fighter2" class="fighter right"></div></div>
+        <div class="battle-bottom">
+          <div class="commands"><div class="command-head"><div><div id="commandTitle" class="command-title">1P 選擇行動</div><div id="commandSub" class="command-sub">選好後立即鎖定本回合行動</div></div><div id="waiting" class="waiting">等待 2P 選擇…</div></div><div id="cmdGrid" class="cmd-grid"></div></div>
+          <div id="battleLog" class="log"><h3>BATTLE LOG</h3></div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+<div id="resultOverlay" class="overlay"><div class="modal"><div id="resultKicker" class="eyebrow">BATTLE RESULT</div><h2 id="resultTitle">1P WIN</h2><p id="resultText"></p><div class="modal-actions"><button id="rematchBtn" class="cta">REMATCH</button><button id="backBtn" class="secondary">重新選角</button></div></div></div>
+<div id="refOverlay" class="overlay"><div class="modal ref"><div class="eyebrow">REFERENCE</div><h2 style="font-size:28px">設計參考</h2><p>本原型的格鬥介面只參考「左右對峙、HP 資源條、角色異色、街機式演出」等高層概念。V9 的北極熊與大象依使用者提供的實體布偶照片重新概括輪廓；熊貓只採用「趴睡、扁圓」的廣義概念；水母只採用「圓傘帽＋長觸手＋簡單表情」的廣義概念，所有 SVG 均重新繪製。</p><ul><li>CAPCOM — Street Fighter 6 官方網站：<br><a href="https://www.streetfighter.com/6/" target="_blank" rel="noreferrer">https://www.streetfighter.com/6/</a></li><li>SEGA Retro — Yu Yu Hakusho: Makyou Toitsusen 條目：<br><a href="https://segaretro.org/Yuu_Yuu_Hakusho:_Makyou_Toitsusen" target="_blank" rel="noreferrer">https://segaretro.org/Yuu_Yuu_Hakusho:_Makyou_Toitsusen</a></li></ul><div class="copyright">Prototype v9 — full visual overhaul / cinematic cut-ins / denser in-between motion / advanced impact presentation. Plush references were reinterpreted; copyrighted character references were used only for broad pose and silhouette ideas and were independently redrawn.</div><div class="modal-actions"><button id="closeRef" class="cta">關閉</button></div></div></div>
+<script>
+const chars=[
+ {id:'bear',name:'波洛',animal:'北極熊',job:'烈焰法師',hp:104,mp:118,atk:12,def:7,spd:9,passive:'極地爐心：HP 低於 50% 時，魔法與技能傷害 +12%。看起來最適合冰系近戰，偏偏專精火焰。',skills:[
+  {id:'basic',name:'火星彈',cost:0,desc:'小型遠程火彈，不消耗 MP',type:'magic',power:14,acc:97,fx:'ember'},
+  {id:'s1',name:'反季節火球',cost:15,desc:'高速火球，穿透大量防禦',type:'magic',power:28,acc:95,fx:'fireball'},
+  {id:'s2',name:'白夜隕星',cost:27,desc:'高威力隕火，22% 使對手失衡',type:'stun',power:34,acc:89,stun:.22,fx:'meteor'},
+ ],colors:[['#f3fbff','#91d9ff','#d83b25'],['#ffe7d1','#f3a56f','#69243b']]},
+ {id:'elephant',name:'坦波',animal:'大象',job:'遠擊砲手',hp:138,mp:78,atk:13,def:12,spd:5,passive:'長距校準：專屬技能（非普通攻擊）傷害 +8%。體型像坦克，卻堅持站遠處轟炸。',skills:[
+  {id:'basic',name:'鼻砲水彈',cost:0,desc:'用象鼻發射高壓水彈',type:'magic',power:15,acc:97,fx:'water'},
+  {id:'s1',name:'耳翼暴風',cost:16,desc:'搧出遠程暴風並降低速度',type:'slow',power:22,acc:94,fx:'wind'},
+  {id:'s2',name:'地脈震波',cost:22,desc:'跺地讓震波沿地面奔向敵人',type:'stun',power:29,acc:91,stun:.28,fx:'shockwave'},
+ ] ,colors:[['#9c78b9','#cdb9da','#644583'],['#9ed8eb','#d9f3fb','#4f91ae']]},
+ {id:'panda',name:'糰糰',animal:'熊貓',job:'疾影刺客',hp:96,mp:94,atk:16,def:6,spd:18,passive:'懶態瞬身：若本回合先行動，造成傷害 +12%。看起來最想躺平，真正開打卻是全隊最快。',skills:[
+  {id:'basic',name:'竹葉瞬步',cost:0,desc:'懶洋洋抬手，下一瞬間已完成近身打擊',type:'damage',power:16,acc:98,fx:'shadow'},
+  {id:'s1',name:'竹影飛刃',cost:14,desc:'高速旋轉竹葉，無視大量防禦',type:'pierce',power:24,acc:96,fx:'leaf'},
+  {id:'s2',name:'一秒七掌',cost:23,desc:'七段殘影掌擊，暴擊率高',type:'damage',power:29,acc:93,crit:.30,fx:'shadow'},
+ ] ,colors:[['#f6f3eb','#24262c','#70b864'],['#e8e5ff','#4a4267','#b46bd2']]},
+ {id:'hummingbird',name:'啾槌',animal:'蜂鳥',job:'巨槌狂戰士',hp:98,mp:72,atk:19,def:5,spd:13,passive:'羽量暴怒：HP 低於 35% 時，所有攻擊傷害 +18%。明明輕到能停在花上，偏偏只愛揮超重武器。',skills:[
+  {id:'basic',name:'小翼大槌',cost:0,desc:'用比自己還大的戰槌敲擊',type:'damage',power:18,acc:96,fx:'hammer'},
+  {id:'s1',name:'蜂鳴衝槌',cost:15,desc:'高速振翅後帶著巨槌直線衝撞',type:'damage',power:27,acc:94,crit:.22,fx:'airhammer'},
+  {id:'s2',name:'天空墜星槌',cost:22,desc:'從高處俯衝重砸，30% 使對手失衡',type:'stun',power:31,acc:90,stun:.30,fx:'hammerquake'},
+ ],colors:[['#58d5b2','#e6fff6','#f35d88'],['#67a5ff','#edf4ff','#ffb248']]},
+ {id:'orca',name:'歐洛',animal:'虎鯨',job:'深海吟遊詩人',hp:122,mp:108,atk:10,def:9,spd:9,passive:'深海安可：使用「凝神」時額外回復 6 HP。看起來像海中霸主，實際上更在意音準與舞台效果。',skills:[
+  {id:'basic',name:'鯨歌音符',cost:0,desc:'把一枚低音音符送向對手',type:'magic',power:13,acc:98,fx:'note'},
+  {id:'s1',name:'潮汐和弦',cost:17,desc:'低頻和弦造成傷害並降低攻擊',type:'weaken',power:21,acc:95,fx:'bass'},
+  {id:'s2',name:'鯨歌安魂曲',cost:22,desc:'沉浸式演唱，回復 28 HP',type:'heal',power:28,acc:100,fx:'heal'},
+ ],colors:[['#172235','#f5f7fa','#55c9ff'],['#493577','#fff0fb','#ff71b9']]},
+ {id:'jelly',name:'璃璃',animal:'水母',job:'重裝聖騎士',hp:128,mp:92,atk:9,def:14,spd:6,passive:'無骨重甲：所有專屬護盾效果 +25%。全隊最柔軟、沒有骨頭，卻是最難打穿的防線。',skills:[
+  {id:'basic',name:'麻麻聖光',cost:0,desc:'用溫和表情放出一發麻痺電光',type:'magic',power:13,acc:98,fx:'electric'},
+  {id:'s1',name:'水晶聖盾',cost:16,desc:'展開透明水膜，獲得 24 點基礎護盾',type:'shield',power:24,acc:100,fx:'bubble'},
+  {id:'s2',name:'不動水母城',cost:28,desc:'堆疊大型結界，獲得 40 點基礎護盾',type:'shield',power:40,acc:100,fx:'bubble'},
+ ] ,colors:[['#eef7d4','#8dcfe9','#5a78cf'],['#ffd7ee','#c7a8ef','#7858b6']]}
+];
+const utility=[
+ {id:'guard',name:'防禦',cost:0,desc:'本回合承傷 -45%',type:'guard',fx:'guard'},
+ {id:'focus',name:'凝神',cost:0,desc:'回復 14 MP',type:'focus',fx:'focus'}
+];
+let mode='cpu',sel=[0,1],palette=[0,0],battle=null;
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+
+function animalSVG(c,pi=0){
+ const [a,b,d]=c.colors[pi];
+ const outline='#121522', eye='#11131a', hi='rgba(255,255,255,.55)';
+ const common=`stroke="${outline}" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"`;
+ if(c.id==='bear')return `<svg viewBox="0 0 220 220" aria-label="${c.animal}"><ellipse cx="110" cy="202" rx="73" ry="10" fill="rgba(0,0,0,.19)"/><ellipse cx="110" cy="118" rx="69" ry="83" fill="${a}" ${common}/><ellipse cx="72" cy="57" rx="16" ry="19" fill="${a}" ${common}/><ellipse cx="148" cy="57" rx="16" ry="19" fill="${a}" ${common}/><ellipse cx="110" cy="124" rx="49" ry="60" fill="${b}" opacity=".23"/><ellipse cx="84" cy="93" rx="7" ry="10" fill="${eye}"/><ellipse cx="136" cy="93" rx="7" ry="10" fill="${eye}"/><circle cx="86" cy="90" r="2.4" fill="#fff" opacity=".85"/><circle cx="138" cy="90" r="2.4" fill="#fff" opacity=".85"/><path d="M105 109 q5-5 10 0 q-5 8-10 0" fill="${eye}"/><path d="M110 115 q0 11-9 13 M110 115 q0 11 9 13" fill="none" stroke="${eye}" stroke-width="4" stroke-linecap="round"/><path d="M76 119 q-8 8-10 21 M144 119 q8 8 10 21" fill="none" stroke="#eaa0a7" stroke-width="4" stroke-linecap="round" opacity=".72"/><ellipse cx="53" cy="151" rx="15" ry="33" fill="${a}" ${common} transform="rotate(16 53 151)"/><ellipse cx="167" cy="151" rx="15" ry="33" fill="${a}" ${common} transform="rotate(-16 167 151)"/><path d="M87 154 Q110 142 133 154 L137 188 Q110 201 83 188Z" fill="${d}" opacity=".92" ${common}/><path d="M101 160 l9-16 9 16-9 10z" fill="#ffb54b" stroke="#7f2d22" stroke-width="4"/><path d="M110 145 q-8-10 1-19 q9 9 1 17 q13-6 15 5 q-8 7-17 3" fill="#ff7040" stroke="#7f2d22" stroke-width="4"/><ellipse cx="98" cy="52" rx="11" ry="6" fill="${hi}" opacity=".42"/></svg>`;
+ if(c.id==='elephant')return `<svg viewBox="0 0 220 220" aria-label="${c.animal}"><ellipse cx="110" cy="202" rx="76" ry="10" fill="rgba(0,0,0,.18)"/><ellipse cx="110" cy="138" rx="60" ry="63" fill="${a}" ${common}/><ellipse cx="62" cy="95" rx="39" ry="46" fill="${b}" ${common} transform="rotate(10 62 95)"/><ellipse cx="158" cy="95" rx="39" ry="46" fill="${b}" ${common} transform="rotate(-10 158 95)"/><ellipse cx="110" cy="92" rx="55" ry="49" fill="${a}" ${common}/><ellipse cx="88" cy="84" rx="6.5" ry="8" fill="${eye}"/><ellipse cx="132" cy="84" rx="6.5" ry="8" fill="${eye}"/><circle cx="90" cy="81" r="2" fill="#fff"/><circle cx="134" cy="81" r="2" fill="#fff"/><path d="M108 102 C101 126 105 156 122 166 C134 173 144 164 141 153" fill="none" stroke="${outline}" stroke-width="28" stroke-linecap="round"/><path d="M108 102 C101 126 105 156 122 166 C134 173 144 164 141 153" fill="none" stroke="${a}" stroke-width="19" stroke-linecap="round"/><path d="M116 164 q12 9 22-2" fill="none" stroke="${b}" stroke-width="5" stroke-linecap="round"/><ellipse cx="73" cy="165" rx="25" ry="32" fill="${a}" ${common}/><ellipse cx="147" cy="165" rx="25" ry="32" fill="${a}" ${common}/><ellipse cx="77" cy="194" rx="24" ry="10" fill="${b}" opacity=".72"/><ellipse cx="143" cy="194" rx="24" ry="10" fill="${b}" opacity=".72"/><path d="M76 140 Q110 127 144 140 L139 158 Q110 166 81 158Z" fill="${d}" opacity=".88" ${common}/><circle cx="101" cy="54" r="10" fill="${hi}" opacity=".40"/><path d="M64 87 q-9 10-7 23 M156 87 q9 10 7 23" fill="none" stroke="rgba(255,255,255,.27)" stroke-width="6" stroke-linecap="round"/></svg>`;
+ if(c.id==='panda')return `<svg viewBox="0 0 220 220" aria-label="${c.animal}"><ellipse cx="111" cy="197" rx="82" ry="10" fill="rgba(0,0,0,.19)"/><ellipse cx="128" cy="150" rx="67" ry="42" fill="${a}" ${common} transform="rotate(-5 128 150)"/><ellipse cx="165" cy="151" rx="29" ry="35" fill="${b}" ${common} transform="rotate(-16 165 151)"/><circle cx="68" cy="72" r="22" fill="${b}" ${common}/><circle cx="146" cy="72" r="22" fill="${b}" ${common}/><ellipse cx="107" cy="102" rx="61" ry="51" fill="${a}" ${common}/><ellipse cx="81" cy="97" rx="20" ry="27" fill="${b}" transform="rotate(17 81 97)"/><ellipse cx="133" cy="97" rx="20" ry="27" fill="${b}" transform="rotate(-17 133 97)"/><circle cx="82" cy="97" r="10" fill="#f9f8f4"/><circle cx="132" cy="97" r="10" fill="#f9f8f4"/><circle cx="83" cy="98" r="5" fill="${eye}"/><circle cx="131" cy="98" r="5" fill="${eye}"/><circle cx="85" cy="95" r="1.7" fill="#fff"/><circle cx="133" cy="95" r="1.7" fill="#fff"/><ellipse cx="107" cy="117" rx="9" ry="6" fill="${b}"/><path d="M98 127 q9 7 18 0" fill="none" stroke="${eye}" stroke-width="4" stroke-linecap="round"/><ellipse cx="70" cy="135" rx="31" ry="18" fill="${b}" ${common} transform="rotate(9 70 135)"/><ellipse cx="143" cy="135" rx="31" ry="18" fill="${b}" ${common} transform="rotate(-8 143 135)"/><path d="M153 125 q28-22 39-6 q-10 12-32 17" fill="#77bf69" ${common}/><path d="M180 114 q8 4 10 13" fill="none" stroke="#355f31" stroke-width="5"/><path d="M121 141 q20 5 34 19" fill="none" stroke="${d}" stroke-width="7" stroke-linecap="round" opacity=".75"/><circle cx="99" cy="62" r="9" fill="${hi}" opacity=".40"/></svg>`;
+ if(c.id==='hummingbird')return `<svg viewBox="0 0 220 220"><ellipse cx="110" cy="199" rx="61" ry="10" fill="rgba(0,0,0,.18)"/><path d="M79 113 Q35 73 30 119 Q51 145 86 136Z" fill="${b}" ${common}/><path d="M136 112 Q183 69 190 116 Q171 145 136 137Z" fill="${b}" ${common}/><ellipse cx="111" cy="111" rx="48" ry="53" fill="${a}" ${common}/><ellipse cx="111" cy="126" rx="30" ry="30" fill="${b}"/><circle cx="99" cy="92" r="6" fill="${eye}"/><circle cx="129" cy="92" r="6" fill="${eye}"/><path d="M139 102 L204 91 L144 116Z" fill="#f1cf7a" ${common}/><path d="M99 110 q12 8 24 0" fill="none" ${common}/><path d="M86 147 Q111 132 139 148 L136 185 Q111 196 87 185Z" fill="${d}" ${common}/><path d="M88 185 l-18 13 M132 185 l18 13" stroke="#eac46c" stroke-width="7" stroke-linecap="round"/><g transform="translate(54 151) rotate(-18)"><rect x="-5" y="-11" width="74" height="11" rx="6" fill="#6a4930"/><rect x="-14" y="-28" width="33" height="34" rx="7" fill="#c9d0db" ${common}/></g><circle cx="103" cy="74" r="7" fill="${hi}"/></svg>`;
+ if(c.id==='orca')return `<svg viewBox="0 0 220 220"><ellipse cx="110" cy="199" rx="70" ry="11" fill="rgba(0,0,0,.2)"/><path d="M68 72 Q74 36 111 42 Q143 42 156 72 Q174 82 174 112 Q172 153 111 163 Q51 154 48 112 Q48 84 68 72Z" fill="${a}" ${common}/><path d="M101 43 Q113 16 127 44" fill="${a}" ${common}/><ellipse cx="109" cy="127" rx="42" ry="27" fill="${b}"/><ellipse cx="84" cy="88" rx="15" ry="9" fill="${b}" transform="rotate(-20 84 88)"/><ellipse cx="137" cy="88" rx="15" ry="9" fill="${b}" transform="rotate(20 137 88)"/><circle cx="90" cy="95" r="5.5" fill="${eye}"/><circle cx="132" cy="95" r="5.5" fill="${eye}"/><path d="M99 116 q12 10 24 0" fill="none" ${common}/><path d="M54 119 q-31 2-35 25 q23 8 42-3M164 119 q31 2 35 25 q-23 8-42-3" fill="${a}" ${common}/><path d="M101 163 q10 18 9 35 q-22-11-34-1 q7-21 25-34M119 163 q-10 18-9 35 q22-11 34-1 q-7-21-25-34" fill="${a}" ${common}/><path d="M76 142 Q110 157 146 142 L139 176 Q110 188 81 176Z" fill="${d}" opacity=".92" ${common}/><circle cx="103" cy="62" r="8" fill="${hi}"/><path d="M151 70 q18-14 31 0" fill="none" stroke="${d}" stroke-width="5" stroke-linecap="round"/><circle cx="185" cy="68" r="8" fill="${d}"/></svg>`;
+ return `<svg viewBox="0 0 220 220" aria-label="${c.animal}"><ellipse cx="110" cy="202" rx="62" ry="9" fill="rgba(0,0,0,.15)"/><path d="M48 108 C49 57 75 35 110 35 C145 35 171 57 172 108 C158 123 142 129 110 129 C78 129 62 123 48 108Z" fill="${a}" ${common}/><path d="M61 99 C67 62 86 50 110 50 C134 50 153 62 159 99" fill="#fff" opacity=".30"/><path d="M48 108 q13 15 27 2 q13 18 28 1 q14 18 29 0 q14 17 28-1 q10 10 12-2" fill="${a}" ${common}/><circle cx="86" cy="88" r="13" fill="#fff" ${common}/><circle cx="134" cy="88" r="13" fill="#fff" ${common}/><circle cx="86" cy="90" r="6" fill="${eye}"/><circle cx="134" cy="90" r="6" fill="${eye}"/><circle cx="89" cy="86" r="2" fill="#fff"/><circle cx="137" cy="86" r="2" fill="#fff"/><path d="M101 108 q9 8 18 0" fill="none" stroke="${eye}" stroke-width="4" stroke-linecap="round"/><path d="M80 126 C70 147 64 169 70 194 M96 128 C88 153 90 177 88 199 M110 130 C109 155 112 177 110 201 M124 128 C132 153 130 177 132 199 M140 126 C150 147 156 169 150 194" fill="none" stroke="${b}" stroke-width="11" stroke-linecap="round"/><path d="M110 47 l8 15 17 3-12 12 3 17-16-8-16 8 3-17-12-12 17-3z" fill="${d}" opacity=".84" stroke="${outline}" stroke-width="4" stroke-linejoin="round"/><path d="M96 137 Q110 145 124 137 L122 161 Q110 168 98 161Z" fill="${d}" opacity=".82" ${common}/><path d="M110 143 v13 M104 149 h12" stroke="#fff9d6" stroke-width="4" stroke-linecap="round"/><ellipse cx="96" cy="49" rx="13" ry="7" fill="${hi}" opacity=".43"/></svg>`;
+}
+function renderRoster(player){
+ const box=$(`#p${player}Roster`); box.innerHTML='';
+ chars.forEach((c,i)=>{const el=document.createElement('button');el.className='char-card'+(sel[player-1]===i?' selected':'');el.innerHTML=`<div class="portrait">${animalSVG(c,palette[player-1])}</div><h3>${c.name}・${c.animal}</h3><small>${c.job}</small>`;el.onclick=()=>{sel[player-1]=i;if(player===2 && sel[0]===sel[1] && palette[0]===palette[1]) palette[1]=1-palette[0];renderAllSelect();};box.appendChild(el);});
+ renderDetail(player);
+}
+function renderDetail(player){
+ const c=chars[sel[player-1]], pi=palette[player-1], box=$(`#p${player}Detail`);
+ box.innerHTML=`<div class="big-portrait">${animalSVG(c,pi)}</div><div class="detail"><div class="job">${c.job}</div><h3>${c.name}・${c.animal}</h3><div class="passive">${c.passive}</div><div class="stats"><div class="stat"><b>${c.hp}</b><span>HP</span></div><div class="stat"><b>${c.mp}</b><span>MP</span></div><div class="stat"><b>${c.atk}</b><span>ATK</span></div><div class="stat"><b>${c.def}</b><span>DEF</span></div><div class="stat"><b>${c.spd}</b><span>SPD</span></div></div><div class="palette-row"><span style="font-size:11px;color:var(--muted)">異色造型</span><button class="palette ${pi===0?'active':''}" data-p="0">COLOR A</button><button class="palette ${pi===1?'active':''}" data-p="1">COLOR B</button></div></div>`;
+ box.querySelectorAll('.palette').forEach(b=>b.onclick=()=>{palette[player-1]=+b.dataset.p;if(sel[0]===sel[1] && palette[0]===palette[1]) palette[player===1?1:0]=1-palette[player-1];renderAllSelect();});
+}
+function renderAllSelect(){renderRoster(1);renderRoster(2)}
+$$('.mode').forEach(b=>b.onclick=()=>{$$('.mode').forEach(x=>x.classList.remove('active'));b.classList.add('active');mode=b.dataset.mode;$('#p2Badge').textContent=mode==='cpu'?'CPU / MAGENTA':'2P / MAGENTA';});
+
+function makeFighter(c,pi,side){return {c,pi,side,hp:c.hp,mp:c.mp,maxHp:c.hp,maxMp:c.mp,shield:0,guard:false,poison:0,weaken:0,slow:0,stun:false,lastAction:null};}
+const poseClasses=['pose-idle','pose-ready','pose-charge','pose-release','pose-strike','pose-recover','pose-hit','pose-guard','pose-ko','pose-victory','low-hp','attack','hit','guard','ko','skill','frame-1','frame-2','frame-3','frame-4','frame-5'];
+function clearFighterVisualState(){[1,2].forEach(i=>{const el=$(`#fighter${i}`);el.classList.remove(...poseClasses);el.removeAttribute('data-char');});$$('#stage .sequence-layer,#stage .fx,#stage .stage-banner,#stage .afterimage,#stage .fx-flash,#stage .speed-sweep,#stage .impact-burst,#stage .combo-tag,#stage .cinematic-cutin').forEach(el=>el.remove());$('#stage')?.classList.remove('shake','zoom-left','zoom-right','ko-freeze');}
+function setPose(side,pose='idle'){const el=$(`#fighter${side+1}`);if(!el)return;el.classList.remove('pose-idle','pose-ready','pose-charge','pose-release','pose-strike','pose-recover','pose-hit','pose-guard','pose-ko','pose-victory');el.classList.add(`pose-${pose}`);}
+function setIdle(side){if(!battle||battle.ended)return;setPose(side,'idle');}
+function shakeStage(){const st=$('#stage');st.classList.remove('shake');void st.offsetWidth;st.classList.add('shake');setTimeout(()=>st.classList.remove('shake'),240);}
+function stageBanner(main,sub='',ko=false){const st=$('#stage'),el=document.createElement('div');el.className=`stage-banner${ko?' ko':''}`;el.innerHTML=`${main}${sub?`<small>${sub}</small>`:''}`;st.appendChild(el);setTimeout(()=>el.remove(),760);}
+function sideBaseTransform(side,x=0,y=0){return side===0?`translate(${x}px,${y}px) scaleX(1)`:`translate(${x}px,${y}px) scaleX(-1)`;}
+function fxColorForSkill(s){const kind=s.fx||s.type; if(['ember','fireball','meteor'].includes(kind)) return 'rgba(255,133,62,.48)'; if(['water','bubble'].includes(kind)) return 'rgba(109,219,255,.44)'; if(['electric'].includes(kind)) return 'rgba(164,242,255,.44)'; if(['shadow','leaf'].includes(kind)) return 'rgba(150,230,119,.38)'; if(['hammer','airhammer','hammerquake','shockwave'].includes(kind)) return 'rgba(255,215,110,.42)'; if(['note','bass'].includes(kind)) return 'rgba(195,124,255,.42)'; return 'rgba(255,255,255,.32)';}
+function cinematicStage(side,duration=640,ko=false){const st=$('#stage'); if(!st) return; st.classList.remove('zoom-left','zoom-right','ko-freeze'); void st.offsetWidth; st.classList.add(ko?'ko-freeze':(side===0?'zoom-left':'zoom-right')); setTimeout(()=>st.classList.remove('zoom-left','zoom-right','ko-freeze'),duration);}
+function spawnStageFlash(color='rgba(255,255,255,.28)', focus='50% 50%'){const st=$('#stage'),el=document.createElement('div');el.className='fx-flash';el.style.background=`radial-gradient(circle at ${focus}, ${color} 0, rgba(255,255,255,.06) 18%, transparent 62%)`;st.appendChild(el);setTimeout(()=>el.remove(),320);}
+function spawnSpeedSweep(side,color='rgba(255,255,255,.18)'){const st=$('#stage'),el=document.createElement('div');el.className=`speed-sweep ${side===0?'left':'right'}`;el.style.background=side===0?`linear-gradient(90deg,transparent,rgba(255,255,255,.04),${color},transparent)`:`linear-gradient(270deg,transparent,rgba(255,255,255,.04),${color},transparent)`;st.appendChild(el);setTimeout(()=>el.remove(),420);}
+function spawnImpactBurst(side,color='rgba(255,255,255,.45)',label=''){const st=$('#stage'),el=document.createElement('div');el.className='impact-burst';el.style.left=side===0?'19%':'66%';el.style.top='37%';el.style.background=`radial-gradient(circle, ${color} 0, rgba(255,255,255,.18) 36%, transparent 72%)`;st.appendChild(el);setTimeout(()=>el.remove(),460); if(label){const t=document.createElement('div');t.className='combo-tag';t.textContent=label;t.style.left=side===0?'15%':'62%';t.style.top='30%';st.appendChild(t);setTimeout(()=>t.remove(),620);} }
+function spawnAfterimage(side,dx,dy=0){const st=$('#stage'),actor=$(`#fighter${side+1}`); if(!actor) return; const ghost=actor.cloneNode(true); ghost.id=''; ghost.classList.add('afterimage'); ghost.style.transform=sideBaseTransform(side,dx,dy); st.appendChild(ghost); setTimeout(()=>ghost.remove(),360);}
+function animateActorMotion(side,s){const actor=$(`#fighter${side+1}`); if(!actor?.animate) return; const dir=side===0?1:-1, fx=s.fx||'', type=s.type||''; let kf; if(['guard','shield','heal','focus'].includes(type)){kf=[{transform:sideBaseTransform(side,0,0)},{offset:.28,transform:sideBaseTransform(side,-dir*8,6)},{offset:.62,transform:sideBaseTransform(side,dir*8,-12)},{transform:sideBaseTransform(side,0,0)}];}
+ else if(['shadow','leaf','hammer','airhammer'].includes(fx)||['damage','pierce'].includes(type)){kf=[{transform:sideBaseTransform(side,0,0)},{offset:.18,transform:sideBaseTransform(side,-dir*18,6)},{offset:.52,transform:sideBaseTransform(side,dir*58,-8)},{offset:.74,transform:sideBaseTransform(side,dir*74,-12)},{transform:sideBaseTransform(side,0,0)}];}
+ else if(['hammerquake','shockwave','meteor'].includes(fx)){kf=[{transform:sideBaseTransform(side,0,0)},{offset:.24,transform:sideBaseTransform(side,-dir*10,-14)},{offset:.6,transform:sideBaseTransform(side,dir*28,8)},{transform:sideBaseTransform(side,0,0)}];}
+ else{kf=[{transform:sideBaseTransform(side,0,0)},{offset:.22,transform:sideBaseTransform(side,-dir*8,4)},{offset:.54,transform:sideBaseTransform(side,dir*24,-7)},{offset:.78,transform:sideBaseTransform(side,dir*14,-2)},{transform:sideBaseTransform(side,0,0)}];}
+ actor.animate(kf,{duration:720,easing:'cubic-bezier(.2,.82,.22,1)'});}
+function animateTargetMotion(targetSide,attackerSide){const actor=$(`#fighter${targetSide+1}`); if(!actor?.animate) return; const push=attackerSide===0?22:-22; actor.animate([{transform:sideBaseTransform(targetSide,0,0)},{offset:.28,transform:sideBaseTransform(targetSide,push,-5)},{offset:.58,transform:sideBaseTransform(targetSide,push*.45,1)},{transform:sideBaseTransform(targetSide,0,0)}],{duration:320,easing:'cubic-bezier(.2,.82,.22,1)'});}
+function isSuperSkill(s){return (s.cost||0)>=16 || (s.power||0)>=28 || ['meteor','bass','bubble','hammerquake','airhammer','shockwave'].includes(s.fx||'');}
+function cutinRoleLabel(s){if(['guard','shield','heal','focus'].includes(s.type))return 'SUPPORT'; if(['magic'].includes(s.type)||['ember','fireball','meteor','electric'].includes(s.fx||''))return 'ARCANE'; if(['note','bass'].includes(s.fx||''))return 'SPECIAL'; return 'FINISH';}
+async function showCutin(side,s){const st=$('#stage'),fighter=battle?.f?.[side]; if(!st||!fighter)return; cinematicStage(side,640,false); spawnStageFlash(fxColorForSkill(s), side===0?'24% 48%':'76% 48%'); const el=document.createElement('div'); el.className=`cinematic-cutin ${side===1?'right':''}`; el.innerHTML=`<div class="cutin-card"><div class="cutin-art">${animalSVG(fighter.c,fighter.pi)}</div><div class="cutin-meta"><div class="cutin-ribbon">${cutinRoleLabel(s)}</div><div class="cutin-name">${s.name}</div><div class="cutin-sub">${fighter.c.name}・${fighter.c.job}</div><div class="cutin-desc">${s.desc}</div></div></div>`; st.appendChild(el); requestAnimationFrame(()=>el.classList.add('show')); await wait(560); el.classList.remove('show'); el.classList.add('hide'); setTimeout(()=>el.remove(),260); await wait(90);}
+function startBattle(){
+ const c1=chars[sel[0]],c2=chars[sel[1]]; if(c1.id===c2.id && palette[0]===palette[1])palette[1]=1-palette[0];
+ clearFighterVisualState();
+ battle={round:1,phase:1,locked:[null,null],busy:false,ended:false,f:[makeFighter(c1,palette[0],0),makeFighter(c2,palette[1],1)]};
+ $('#selectScreen').classList.remove('active');$('#battleScreen').classList.add('active');$('#resultOverlay').classList.remove('show');$('#battleLog').innerHTML='<h3>BATTLE LOG</h3>';renderBattle();beginRound();
+}
+function renderBattle(){
+ const [a,b]=battle.f;
+ $('#fighter1').dataset.char=a.c.id;$('#fighter2').dataset.char=b.c.id;
+ $('#fighter1').innerHTML=`${animalSVG(a.c,a.pi)}<div class="expression"><i></i><i></i><b></b></div><div class="pose-icon"></div><div class="nameplate">${a.c.name}・${a.c.job}</div>`;
+ $('#fighter2').innerHTML=`${animalSVG(b.c,b.pi)}<div class="expression"><i></i><i></i><b></b></div><div class="pose-icon"></div><div class="nameplate">${b.c.name}・${b.c.job}</div>`;
+ setPose(0,'idle');setPose(1,'idle');
+ $('#p1HudName').textContent=`1P ${a.c.name} / ${a.c.job}`;$('#p2HudName').textContent=`${mode==='cpu'?'CPU':'2P'} ${b.c.name} / ${b.c.job}`;updateHUD();
+ stageBanner('ROUND 1','FIGHT!');
+}
+function updateHUD(){battle.f.forEach((f,i)=>{const p=i+1,ratio=f.hp/f.maxHp; $(`#p${p}Hp`).style.width=`${Math.max(0,ratio*100)}%`; $(`#p${p}Mp`).style.width=`${Math.max(0,f.mp/f.maxMp*100)}%`; $(`#p${p}HpTxt`).textContent=`HP ${Math.max(0,f.hp)} / ${f.maxHp}${f.shield?` +${f.shield}盾`:''}`;$(`#p${p}MpTxt`).textContent=`MP ${f.mp} / ${f.maxMp}`;$(`#fighter${p}`).classList.toggle('low-hp',ratio>0&&ratio<.3);});$('#roundLabel').textContent=`ROUND ${battle.round}`;}
+function beginRound(){
+ if(battle.ended)return; battle.locked=[null,null]; battle.phase=1; battle.busy=false; battle.f.forEach(f=>{f.guard=false;if(f.poison>0){f.hp=Math.max(0,f.hp-5);f.poison--;log(`${f.c.name} 受到中毒傷害 5 點。`);fxDamage(f.side,5,'☠');}});updateHUD();
+ if(checkEnd())return;setPose(0,'idle');setPose(1,'idle');
+ if(battle.round>1)stageBanner(`ROUND ${battle.round}`,'FIGHT!');
+ setPrompt(0);renderCommands(0);
+}
+function setPrompt(side){battle.phase=side+1;const who=side===0?'1P':(mode==='cpu'?'CPU':'2P');$('#commandTitle').textContent=`${who} 選擇行動`;$('#commandSub').textContent=mode==='local'&&side===1?'請 1P 先不要偷看 2P 的選擇':'技能會顯示 MP 消耗與效果';$('#waiting').classList.toggle('show',mode==='local'&&side===1);$('#phaseLabel').textContent='COMMAND';}
+function renderCommands(side){
+ const f=battle.f[side], skills=[...f.c.skills,...utility]; const box=$('#cmdGrid');box.innerHTML='';
+ skills.forEach(s=>{const b=document.createElement('button');b.className='cmd';b.disabled=battle.busy||f.stun||f.mp<s.cost;b.innerHTML=`${s.cost?`<span class="cost">${s.cost} MP</span>`:''}<b>${s.name}</b><small>${s.desc}</small>`;b.onclick=()=>chooseAction(side,s);box.appendChild(b);});
+ if(f.stun){box.innerHTML='<button class="cmd" id="stunSkip"><b>失衡中</b><small>本回合無法行動，點擊繼續。</small></button>';$('#stunSkip').onclick=()=>{f.stun=false;chooseAction(side,{id:'skip',name:'失衡',cost:0,type:'skip'});}}
+}
+function chooseAction(side,skill){
+ if(battle.busy||battle.ended)return; battle.locked[side]=skill; log(`${side===0?'1P':mode==='cpu'?'CPU':'2P'} 已鎖定行動。`,true);
+ if(side===0){
+   if(mode==='cpu'){battle.locked[1]=cpuPick();resolveRound();}
+   else{setPrompt(1);renderCommands(1);}
+ } else resolveRound();
+}
+function cpuPick(){const f=battle.f[1],opp=battle.f[0],opts=[...f.c.skills,...utility].filter(s=>f.mp>=s.cost);const heal=opts.find(x=>x.type==='heal');const shield=opts.filter(x=>x.type==='shield').sort((a,b)=>(b.power||0)-(a.power||0))[0];if(heal&&f.hp/f.maxHp<.42&&Math.random()<.72)return heal;if(shield&&f.shield<12&&f.hp/f.maxHp<.68&&Math.random()<.58)return shield;if(f.hp/f.maxHp<.28&&Math.random()<.32)return utility[0];if(f.mp<18&&Math.random()<.45)return utility[1];if(opp.hp/opp.maxHp<.35){const dmg=opts.filter(x=>['damage','magic','pierce','poison','stun','weaken','slow'].includes(x.type)).sort((a,b)=>(b.power||0)-(a.power||0));if(dmg[0])return dmg[0];}const weighted=opts.filter(x=>x.type!=='heal'&& (x.id!=='guard'||Math.random()<.35));return weighted[Math.floor(Math.random()*weighted.length)]||utility[1];}
+function speed(f){return f.c.spd-(f.slow?3:0)+Math.random()*3;}
+function effectFrameSVG(side,s,t,hit=true){
+ const w=1000,h=520, start=side===0?270:730, end=side===0?730:270, dir=side===0?1:-1;
+ const p=Math.max(0,Math.min(1,t)), frame=1+p*4, x=start+(end-start)*p;
+ const impactX=hit?end:end+dir*105, x2=p>=.72?impactX:x;
+ const glow=(color)=>`<circle cx="${x2}" cy="280" r="${28+frame*4}" fill="${color}" opacity=".12"/><circle cx="${x2}" cy="280" r="${14+frame*2}" fill="${color}" opacity=".82"/>`;
+ let art=''; const kind=s.fx||'slash';
+ if(kind==='ember'||kind==='fireball')art=`<g filter="url(#g)"><path d="M${x2-dir*72} 280 Q${x2-dir*28} ${258-frame*4} ${x2} 280 Q${x2-dir*26} ${302+frame*2} ${x2-dir*72} 280" fill="#ff6b28" opacity=".62"/>${glow('#ffb23f')}<circle cx="${x2+dir*5}" cy="280" r="${kind==='fireball'?22:13}" fill="#fff2a2"/></g>`;
+ else if(kind==='meteor'){const my=88+p*210;art=`<g filter="url(#g)"><path d="M${end-dir*125} ${my-85} L${end-dir*18} ${my}" stroke="#ff742f" stroke-width="34" stroke-linecap="round" opacity=".62"/><circle cx="${end}" cy="${my}" r="27" fill="#ffd45c"/><circle cx="${end}" cy="${my}" r="13" fill="#fff"/></g>`;}
+ else if(kind==='water')art=`<g filter="url(#g)"><path d="M${x2-dir*65} 280 Q${x2-dir*22} 245 ${x2} 280 Q${x2-dir*22} 315 ${x2-dir*65} 280" fill="#49c7ff"/><circle cx="${x2}" cy="280" r="16" fill="#d9f7ff"/></g>`;
+ else if(kind==='wind')art=`<g fill="none" stroke="#ccecff" stroke-width="9" stroke-linecap="round" opacity=".9"><path d="M${x2-dir*80} 255 Q${x2-dir*20} 230 ${x2+dir*35} 260"/><path d="M${x2-dir*72} 285 Q${x2-dir*12} 260 ${x2+dir*48} 288"/><path d="M${x2-dir*58} 315 Q${x2} 295 ${x2+dir*42} 316"/></g>`;
+ else if(kind==='shockwave'||kind==='hammerquake')art=`<g fill="none" stroke="${kind==='shockwave'?'#ffd45c':'#ff8c56'}" stroke-width="10" stroke-linecap="round"><path d="M${start} 382 Q${(start+x2)/2} ${360-frame*5} ${x2} 382"/><path d="M${x2-dir*42} 382 l${dir*20} -28 l${dir*18} 28"/></g>`;
+ else if(kind==='slash'||kind==='shadow')art=`<g fill="none" stroke="${kind==='shadow'?'#b58cff':'#f7fbff'}" stroke-width="12" stroke-linecap="round" opacity=".92"><path d="M${x2-dir*35} 225 L${x2+dir*38} 320"/><path d="M${x2-dir*4} 218 L${x2+dir*62} 295"/></g>`;
+ else if(kind==='leaf')art=`<g fill="#91e36e" stroke="#24472b" stroke-width="3">${[-42,-12,18,48].map((o,i)=>`<ellipse cx="${x2+dir*o}" cy="${260+(i%2)*34}" rx="18" ry="8" transform="rotate(${dir*(25+i*17)} ${x2+dir*o} ${260+(i%2)*34})"/>`).join('')}</g>`;
+ else if(kind==='hammer')art=p<.75?`<g transform="translate(${start+dir*(p*72)} 280) rotate(${dir*(-35+p*64)})"><rect x="-8" y="-60" width="16" height="90" rx="8" fill="#6c4b31"/><rect x="-38" y="-77" width="76" height="35" rx="8" fill="#c7cdd7" stroke="#33394a" stroke-width="5"/></g>`:`<g transform="translate(${end} 310)"><path d="M-55 15 L-20-8 L0 18 L24-10 L58 14" fill="none" stroke="#ffd45c" stroke-width="12"/><circle r="38" fill="#fff0a0" opacity=".28"/></g>`;
+ else if(kind==='airhammer')art=`<g transform="translate(${x2} 275) rotate(${dir*(-38+p*52)})"><path d="M${-dir*78} -5 L${dir*10} -5" stroke="#d9fbff" stroke-width="8" stroke-linecap="round" opacity=".55"/><rect x="-7" y="-55" width="14" height="84" rx="7" fill="#6c4b31"/><rect x="-38" y="-73" width="76" height="34" rx="8" fill="#c7cdd7" stroke="#33394a" stroke-width="5"/></g><g fill="none" stroke="#bff5ff" stroke-width="6" opacity=".65"><path d="M${x2-dir*95} 240 Q${x2-dir*55} 225 ${x2-dir*15} 238"/><path d="M${x2-dir*105} 290 Q${x2-dir*60} 275 ${x2-dir*20} 288"/></g>`;
+ else if(kind==='note'||kind==='bass')art=`<g fill="${kind==='bass'?'#c987ff':'#78e1ff'}" stroke="#fff" stroke-width="3"><circle cx="${x2}" cy="290" r="18"/><path d="M${x2+15} 288 v-70 q35 4 40 24 q-28-8-40 0" fill="none" stroke="${kind==='bass'?'#c987ff':'#78e1ff'}" stroke-width="12"/></g>${kind==='bass'?`<circle cx="${x2}" cy="270" r="${25+frame*12}" fill="none" stroke="#c987ff" stroke-width="6" opacity="${.9-frame*.12}"/>`:''}`;
+ else if(kind==='heal')art=`<g transform="translate(${start} 270)" fill="#79e6a2" stroke="#eaffef" stroke-width="3"><path d="M0 24 C-55-10-50-62 0-37 C50-62 55-10 0 24Z" transform="scale(${.45+frame*.12})"/><circle r="${38+frame*7}" fill="none" stroke="#79e6a2" stroke-width="5" opacity="${1-frame*.14}"/></g>`;
+ else if(kind==='electric')art=`<g transform="translate(${x2} 275)" filter="url(#g)"><path d="M-42 -58 L-9 -16 L-28 -8 L8 22 L-6 28 L42 64 L14 16 L32 7 L-4 -22 L12 -31Z" fill="#c7f8ff" stroke="#6cdcff" stroke-width="6"/><circle r="${20+frame*6}" fill="none" stroke="#8eeaff" stroke-width="5" opacity="${.9-frame*.12}"/></g>`;
+ else if(kind==='bubble')art=`<g transform="translate(${start+dir*34} 275)" fill="#8deaff" stroke="#eaffff" stroke-width="5"><circle r="${45+frame*9}" fill="rgba(112,222,255,.13)"/><circle cx="${-18-frame*3}" cy="${-35-frame*4}" r="${8+frame}" opacity=".65"/><circle cx="${30+frame*2}" cy="${-9-frame*5}" r="${5+frame*.8}" opacity=".5"/><path d="M0 -${34+frame*6} L${28+frame*4} -${12+frame*2} L${22+frame*3} ${30+frame*4} L0 ${44+frame*5} L-${22+frame*3} ${30+frame*4} L-${28+frame*4} -${12+frame*2}Z" fill="rgba(117,164,255,.16)" stroke="#b9d9ff"/></g>`;
+ else if(kind==='guard')art=`<g transform="translate(${start+dir*40} 280)"><path d="M0-75 Q65-55 58 12 Q45 72 0 92 Q-45 72-58 12 Q-65-55 0-75Z" fill="#69d5ff" opacity=".16" stroke="#c8f4ff" stroke-width="8"/></g>`;
+ else art=`<g transform="translate(${start} 270)" fill="#a88cff">${[0,72,144,216,288].map((r,i)=>`<circle cx="${Math.cos(r*Math.PI/180)*(28+frame*7)}" cy="${Math.sin(r*Math.PI/180)*(28+frame*7)}" r="8"/>`).join('')}<circle r="18" fill="#efeaff"/></g>`;
+ const trail = p>.12 && ['ember','fireball','water','note','bass','electric'].includes(kind) ? `<ellipse cx="${start+(x2-start)*.45}" cy="280" rx="${18+22*p}" ry="${6+5*p}" fill="#fff" opacity=".08"/>` : '';
+ return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><defs><filter id="g"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>${trail}${art}</svg>`;
+}
+async function playFiveFrameAction(side,s,hit=true){
+ const stage=$('#stage'),actor=$(`#fighter${side+1}`),layer=document.createElement('div');
+ layer.className='sequence-layer';stage.appendChild(layer);
+ const poses=['ready','charge','release','strike','recover'];
+ const totalSteps=32; let hitTriggered=false; const accent=fxColorForSkill(s);
+ animateActorMotion(side,s);
+ if((s.fx||'').match(/shadow|leaf|hammer|airhammer|note|bass/)) spawnSpeedSweep(side,accent);
+ if((s.fx||'').match(/shadow|leaf|airhammer/)){const dir=side===0?1:-1; setTimeout(()=>spawnAfterimage(side,dir*16,-2),90); setTimeout(()=>spawnAfterimage(side,dir*42,-8),150); setTimeout(()=>spawnAfterimage(side,dir*58,-10),210);}
+ for(let step=0;step<totalSteps;step++){
+   const t=step/(totalSteps-1);
+   const frameIndex=Math.min(4,Math.floor(t*5));
+   actor.classList.remove('frame-1','frame-2','frame-3','frame-4','frame-5');
+   actor.classList.add(`frame-${frameIndex+1}`);
+   setPose(side,poses[frameIndex]);
+   layer.innerHTML=`${effectFrameSVG(side,s,t,hit)}<div class="frame-callout">${s.name} · ${frameIndex+1}/5</div>`;
+   if(step===6) spawnStageFlash(accent, side===0?'24% 58%':'76% 58%');
+   if(!hitTriggered && hit && t>=.68 && !['guard','focus','heal','shield'].includes(s.type)){
+     hitTriggered=true;
+     setPose(1-side,'hit');
+     animateTargetMotion(1-side,side);
+     spawnImpactBurst(1-side,accent, s.type==='stun'?'BREAK':'');
+     spawnStageFlash(accent, side===0?'76% 48%':'24% 48%');
+     shakeStage();
+     await wait(28);
+     setTimeout(()=>{if(battle&&!battle.ended)setPose(1-side,'idle')},240);
+   }
+   if(frameIndex>=3 && s.type==='guard') setPose(side,'guard');
+   await wait(step===totalSteps-1?44:28);
+ }
+ actor.classList.remove('frame-1','frame-2','frame-3','frame-4','frame-5');
+ layer.remove();
+ if(battle&&!battle.ended)setPose(side,s.type==='guard'?'guard':'idle');
+}
+async function resolveRound(){
+ battle.busy=true;$('#waiting').classList.remove('show');$('#cmdGrid').innerHTML='<button class="cmd" disabled><b>結算中…</b><small>依速度與技能優先度處理</small></button>';$('#phaseLabel').textContent='RESOLVE';
+ const order=[0,1].sort((x,y)=>{const ax=battle.locked[x]?.type==='guard'?20:0,ay=battle.locked[y]?.type==='guard'?20:0;return (speed(battle.f[y])+ay)-(speed(battle.f[x])+ax)});
+ for(const side of order){if(checkEnd())break;await act(side,battle.locked[side]);await wait(180);updateHUD();}
+ battle.f.forEach(f=>{if(f.weaken>0)f.weaken--;if(f.slow>0)f.slow--;});
+ if(!checkEnd()){battle.round++;await wait(250);beginRound();}
+}
+async function act(side,s){
+ const me=battle.f[side],op=battle.f[1-side];if(!s||s.type==='skip'){log(`${me.c.name} 因失衡錯過行動。`);return;} me.lastAction=s.id;
+ if(s.cost)me.mp=Math.max(0,me.mp-s.cost);
+ if(s.type==='focus'){
+   if(isSuperSkill(s)) await showCutin(side,s);
+   await playFiveFrameAction(side,s,true);me.mp=Math.min(me.maxMp,me.mp+14);let heal=0;if(me.c.id==='orca'){heal=Math.min(6,me.maxHp-me.hp);me.hp+=heal;}log(`${me.c.name} 凝神，回復 14 MP${heal?`，並因被動回復 ${heal} HP`:''}。`);fxDamage(side,-14,'✦');if(heal)fxText(side,`+${heal} HP`,'heal');return;
+ }
+ if(s.type==='guard'){if(isSuperSkill(s)) await showCutin(side,s); await playFiveFrameAction(side,s,true);me.guard=true;setPose(side,'guard');log(`${me.c.name} 進入防禦架勢。`);return;}
+ if(s.type==='shield'){if(isSuperSkill(s)) await showCutin(side,s); await playFiveFrameAction(side,s,true);const shieldGain=Math.round(s.power*(me.c.id==='jelly'?1.25:1));me.shield+=shieldGain;log(`${me.c.name} 使用「${s.name}」，獲得 ${shieldGain} 點護盾${me.c.id==='jelly'?'（無骨重甲強化）':''}。`);fxDamage(side,-shieldGain,'🛡');return;}
+ if(s.type==='heal'){if(isSuperSkill(s)) await showCutin(side,s); await playFiveFrameAction(side,s,true);const heal=Math.min(s.power,me.maxHp-me.hp);me.hp+=heal;log(`${me.c.name} 使用「${s.name}」，回復 ${heal} HP。`);fxText(side,`+${heal} HP`,'heal');return;}
+ if(isSuperSkill(s)) await showCutin(side,s); const hit=Math.random()*100<=(s.acc||100);await playFiveFrameAction(side,s,hit);
+ if(!hit){spawnStageFlash('rgba(255,255,255,.16)', side===0?'76% 48%':'24% 48%');log(`${me.c.name} 的「${s.name}」落空！`);fxText(1-side,'MISS','miss');return;}
+ let power=s.power||0,atk=me.c.atk*(me.weaken?0.8:1),def=op.c.def,crit=Math.random()<(s.crit||.08);
+ if(me.c.id==='bear'&&me.hp/me.maxHp<.5)power*=1.12;
+ if(me.c.id==='elephant'&&s.id!=='basic')power*=1.08;
+ if(me.c.id==='panda'&&speed(me)>speed(op))power*=1.12;
+ if(me.c.id==='hummingbird'&&me.hp/me.maxHp<.35)power*=1.18;
+ let raw=power+atk*.72+(Math.random()*5-2);if(s.type==='magic')def*=.32;if(s.type==='pierce')def*=.2;let dmg=Math.max(3,Math.round(raw-def*.63));if(crit)dmg=Math.round(dmg*1.5);if(op.guard)dmg=Math.round(dmg*.55);
+ let absorbed=0;if(op.shield>0){absorbed=Math.min(op.shield,dmg);op.shield-=absorbed;dmg-=absorbed;}op.hp=Math.max(0,op.hp-dmg);
+ log(`${me.c.name} 使用「${s.name}」造成 ${dmg}${absorbed?`（護盾吸收 ${absorbed}）`:''} 點傷害${crit?'，暴擊！':''}`); if(crit) spawnImpactBurst(1-side,'rgba(255,221,117,.56)','CRIT'); fxDamage(1-side,dmg,crit?'CRIT!':'HIT!');
+ if(s.type==='poison'){op.poison=3;log(`${op.c.name} 中毒了，持續 3 回合。`);}if(s.type==='weaken'){op.weaken=2;log(`${op.c.name} 的攻擊暫時下降。`);}if(s.type==='slow'){op.slow=2;log(`${op.c.name} 的速度暫時下降。`);}if(s.type==='stun'&&Math.random()<(s.stun||0)){op.stun=true;log(`${op.c.name} 失衡！下回合無法行動。`);fxText(1-side,'STUN','crit');}
+}
+function fxDamage(side,num,tag){fxText(side,num<0?`+${Math.abs(num)} ${tag}`:`-${num} ${tag}`,num<0?'heal':tag==='CRIT!'?'crit':'damage');}
+function fxText(side,text,cls='damage'){const st=$('#stage'),el=document.createElement('div');el.className=`fx fx-text ${cls}`;el.textContent=text;el.style.left=side===0?'23%':'68%';el.style.top='35%';st.appendChild(el);setTimeout(()=>el.remove(),900);}
+function checkEnd(){if(battle.ended)return true;const [a,b]=battle.f;if(a.hp>0&&b.hp>0)return false;battle.ended=true;battle.busy=true;const win=a.hp<=0?1:0,lose=1-win;setPose(lose,'ko');setPose(win,'victory');$('#phaseLabel').textContent='K.O.';cinematicStage(win,720,true);spawnStageFlash('rgba(255,108,112,.42)','50% 48%');spawnImpactBurst(lose,'rgba(255,108,112,.5)','K.O.');stageBanner('K.O.','',true);shakeStage();setTimeout(()=>showResult(win),1220);return true;}
+function showResult(win){const w=battle.f[win];$('#resultTitle').textContent=`${win===0?'1P':mode==='cpu'?'CPU':'2P'} WIN!`;$('#resultText').textContent=`${w.c.name}・${w.c.job} 取得勝利，共進行 ${battle.round} 回合。`;$('#resultOverlay').classList.add('show');}
+function log(t,quiet=false){const e=document.createElement('div');e.className='log-entry';e.textContent=`R${battle?.round||1}｜${t}`;$('#battleLog').appendChild(e);$('#battleLog').scrollTop=$('#battleLog').scrollHeight;if(!quiet){} }
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+function backSelect(){clearFighterVisualState();$('#battleScreen').classList.remove('active');$('#selectScreen').classList.add('active');$('#resultOverlay').classList.remove('show');battle=null;renderAllSelect();}
+$('#startBtn').onclick=startBattle;$('#rematchBtn').onclick=startBattle;$('#backBtn').onclick=backSelect;$('#btnReset').onclick=backSelect;$('#btnRef').onclick=()=>$('#refOverlay').classList.add('show');$('#closeRef').onclick=()=>$('#refOverlay').classList.remove('show');$('#refOverlay').addEventListener('click',e=>{if(e.target.id==='refOverlay')$('#refOverlay').classList.remove('show')});
+renderAllSelect();
+</script>
+</body>
+</html>
