@@ -1,4 +1,8 @@
-# 萌獸鬥技場 Beast Brawl
+**[https://xdxd-lab.github.io/beast_fighter/](https://xdxd-lab.github.io/beast_fighter/)**
+
+點擊上方連結即可在瀏覽器遊玩，不需要下載或安裝。
+
+# 萌獸鬥技場 · Beast Brawl
 
 回合制指令 × 街機格鬥演出。此儲存庫收錄目前的 **V9 — Ultimate Overhaul Edition**。
 
