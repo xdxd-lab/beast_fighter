@@ -204,5 +204,5 @@ GitHub Pages 設定為 **Deploy from a branch → `main` / (root)**。合併到 
 ## 版本紀錄與授權
 
 - 版本紀錄：[CHANGELOG.md](CHANGELOG.md)
-- 授權：本儲存庫目前**尚未附授權條款**，在加入 `LICENSE` 之前，著作權由作者保留。
+- 授權：**保留所有權利（All rights reserved）**。本專案目前為非商業個人作品，未授權他人使用、複製、修改或散布；詳見 [LICENSE](LICENSE)。
 - 設計參考：介面只參考「左右對峙、HP 資源條、角色異色、街機式演出」等高層概念。所有角色 SVG、音效與音樂皆為原創，並在程式執行時產生。完整說明請見遊戲內的 **Reference** 按鈕。

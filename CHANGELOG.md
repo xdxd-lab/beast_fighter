@@ -18,6 +18,7 @@ V10 把 V9 原型整理成可長期維護、可測試的商業級網頁遊戲。
 - **無障礙**：skip link、`:focus-visible`、對話框焦點管理與 Tab 循環、`aria-live` 戰鬥紀錄、HP／MP 條 `role="meter"`、遵循「減少動態效果」。
 - **SEO 與分享**：description、Open Graph、Twitter Card、canonical、SVG favicon、apple-touch-icon、1200×630 分享預覽圖。
 - **測試與 CI**：34 項 Node 單元測試；以 headless Chrome 執行的端到端冒煙測試；GitHub Actions；音量量測與素材產生腳本。
+- **授權聲明**：新增 `LICENSE`，明示保留所有權利、未授權他人使用。
 
 ### Changed
 
