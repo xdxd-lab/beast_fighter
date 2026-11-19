@@ -24,3 +24,24 @@ jobs:
           node-version: 22
       - name: Run node:test suites
         run: node --test tests/*.test.js
+
+  smoke:
+    name: Browser smoke test (headless Chrome)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run end-to-end smoke test
+        env:
+          CI: 'true'
+        run: python3 scripts/qa/smoke_test.py --shots qa-shots
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-screenshots
+          path: qa-shots/
+          if-no-files-found: ignore

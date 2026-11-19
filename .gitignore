@@ -1,0 +1,4 @@
+# Local QA scratch output (screenshots, renders, traces)
+.qa/
+.DS_Store
+node_modules/
