@@ -187,7 +187,9 @@ class Chrome:
 
     def key(self, key, code=None, text=None):
         base = {'key': key, 'code': code or key}
-        self.call('Input.dispatchKeyEvent', type='keyDown', text=text or (key if len(key) == 1 else ''), **base)
+        if text is None:
+            text = {'Enter': '\r', ' ': ' '}.get(key, key if len(key) == 1 else '')
+        self.call('Input.dispatchKeyEvent', type='keyDown', text=text, **base)
         self.call('Input.dispatchKeyEvent', type='keyUp', **base)
 
     def viewport(self, width, height, mobile=False, dpr=1):

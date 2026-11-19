@@ -193,25 +193,27 @@
     box.innerHTML = `<div class="big-portrait">${fighterSVG(c, pi)}</div><div class="detail"><div class="job">${c.job}</div><h3>${c.name}・${c.animal}</h3><div class="passive">${c.passive}</div><div class="stats">${statBar('HP', c.hp, 'hp')}${statBar('MP', c.mp, 'mp')}${statBar('ATK', c.atk, 'atk')}${statBar('DEF', c.def, 'def')}${statBar('SPD', c.spd, 'spd')}</div><ul class="skill-list">${skills}</ul><div class="palette-row"><span class="palette-label">異色造型</span><button class="palette ${pi === 0 ? 'active' : ''}" type="button" data-p="0" aria-pressed="${pi === 0}">COLOR A</button><button class="palette ${pi === 1 ? 'active' : ''}" type="button" data-p="1" aria-pressed="${pi === 1}">COLOR B</button></div></div>`;
   }
 
-  /** Mirror matches must not share a palette; returns the sides whose palette changed. */
-  function resolvePaletteClash(changedSide) {
+  /**
+   * Mirror matches must not share a palette. `flipSide` is the side that gives way:
+   * the side that just picked a character, or the other side after a palette click.
+   * @returns {number[]} sides whose palette changed
+   */
+  function resolvePaletteClash(flipSide) {
     if (app.selection[0] !== app.selection[1] || app.palettes[0] !== app.palettes[1]) return [];
-    const other = changedSide === 0 ? 1 : 0;
-    app.palettes[other] = 1 - app.palettes[changedSide];
-    return [other];
+    app.palettes[flipSide] = 1 - app.palettes[1 - flipSide];
+    return [flipSide];
   }
 
   function selectCharacter(player, index) {
     app.selection[player - 1] = index;
-    const changed = resolvePaletteClash(player - 1);
-    changed.forEach((side) => { renderRoster(side + 1); renderDetail(side + 1); });
-    syncRosterSelection(player);
+    if (resolvePaletteClash(player - 1).length) renderRoster(player);
+    else syncRosterSelection(player);
     renderDetail(player);
   }
 
   function selectPalette(player, pi) {
     app.palettes[player - 1] = pi;
-    const changed = resolvePaletteClash(player - 1);
+    const changed = resolvePaletteClash(player === 1 ? 1 : 0);
     [player - 1, ...changed].forEach((side) => { renderRoster(side + 1); renderDetail(side + 1); });
   }
 
@@ -1013,6 +1015,7 @@
     if (key === 'm') { Settings.set('muted', !Settings.get('muted')); return; }
     if (key === 's' && !open) { syncSettingsForm(); openOverlay(dom.settingsOverlay); return; }
     if ((e.key === '?' || key === 'h') && !open) { openOverlay(dom.helpOverlay); return; }
+    if (open === dom.resultOverlay && e.key === 'Enter' && !e.target.closest('button')) { e.preventDefault(); $('#rematchBtn').click(); return; }
     if (open) return;
 
     if (dom.selectScreen.classList.contains('active')) {
