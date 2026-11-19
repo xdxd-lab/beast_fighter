@@ -3,41 +3,180 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<title>萌獸鬥技場 Beast Brawl V9 - Ultimate Overhaul Edition</title>
+<title>萌獸鬥技場 Beast Brawl｜回合制街機格鬥網頁遊戲</title>
+<meta name="description" content="六隻萌獸、回合制指令、街機格鬥演出。免安裝、免下載，打開瀏覽器就能玩的 1P vs CPU／雙人同機對戰遊戲。" />
+<meta name="theme-color" content="#0b1020" />
+<meta name="color-scheme" content="dark" />
+<meta name="application-name" content="Beast Brawl" />
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="assets/icon-180.png" />
+<link rel="canonical" href="https://xdxd-lab.github.io/beast_fighter/" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="萌獸鬥技場 Beast Brawl" />
+<meta property="og:title" content="萌獸鬥技場 Beast Brawl — 回合制街機格鬥" />
+<meta property="og:description" content="六隻萌獸、回合制指令、街機格鬥演出。打開瀏覽器就能玩。" />
+<meta property="og:url" content="https://xdxd-lab.github.io/beast_fighter/" />
+<meta property="og:image" content="https://xdxd-lab.github.io/beast_fighter/assets/og-image.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:locale" content="zh_TW" />
+<meta name="twitter:card" content="summary_large_image" />
 <link rel="stylesheet" href="css/main.css" />
 </head>
 <body>
+<a class="skip-link" href="#main">跳到主要內容</a>
 <div class="app">
-  <header class="topbar"><div class="brand">BEAST <b>BRAWL</b> // TURN FIGHTER</div><div class="top-actions"><button id="btnMute" class="ghost icon" type="button" aria-pressed="false" aria-label="關閉聲音" title="聲音（M）">🔊</button><button id="btnRef" class="ghost">Reference</button><button id="btnReset" class="ghost">重新選角</button></div></header>
-  <main>
-    <section id="selectScreen" class="screen active">
-      <div class="hero"><div class="eyebrow">ARCADE LOOK × TURN-BASED MIND GAME · V9 ULTIMATE OVERHAUL EDITION</div><h1>萌獸<br>鬥技場</h1><p>外觀是 2D 街機格鬥，操作改成每回合選擇行動。雙方各決定一個指令後，依速度與技能優先度結算。先把對手 HP 歸零就獲勝。</p></div>
-      <div class="mode-row"><button class="mode active" data-mode="cpu">1P vs CPU</button><button class="mode" data-mode="local">1P vs 2P 雙人同機</button></div>
-      <div class="setup-grid">
-        <div class="panel"><div class="panel-head"><h2>選擇左側角色</h2><span class="badge p1b">1P / CYAN</span></div><div id="p1Roster" class="roster"></div><div id="p1Detail" class="fighter-detail"></div></div>
-        <div class="panel"><div class="panel-head"><h2>選擇右側角色</h2><span class="badge p2b" id="p2Badge">CPU / MAGENTA</span></div><div id="p2Roster" class="roster"></div><div id="p2Detail" class="fighter-detail"></div></div>
+  <header class="topbar">
+    <div class="brand">BEAST <b>BRAWL</b> <span class="brand-sub">// TURN FIGHTER</span></div>
+    <nav class="top-actions" aria-label="遊戲選單">
+      <button id="btnMute" class="ghost icon" type="button" aria-pressed="false" aria-label="關閉聲音" title="聲音（M）">🔊</button>
+      <button id="btnSettings" class="ghost icon" type="button" aria-label="設定" title="設定（S）"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+      <button id="btnHelp" class="ghost icon" type="button" aria-label="操作說明" title="操作說明（?）">?</button>
+      <button id="btnRef" class="ghost" type="button">Reference</button>
+      <button id="btnReset" class="ghost" type="button">重新選角</button>
+    </nav>
+  </header>
+  <main id="main" tabindex="-1">
+    <section id="selectScreen" class="screen active" aria-labelledby="heroTitle">
+      <div class="hero">
+        <div class="eyebrow">ARCADE LOOK × TURN-BASED MIND GAME · V10</div>
+        <h1 id="heroTitle">萌獸<br>鬥技場</h1>
+        <p>外觀是 2D 街機格鬥，操作改成每回合選擇行動。雙方各決定一個指令後，依速度與技能優先度結算。先把對手 HP 歸零就獲勝。</p>
       </div>
-      <div class="start-row"><button id="startBtn" class="cta">FIGHT! 開始對戰</button></div>
+      <div class="mode-row" role="group" aria-label="對戰模式">
+        <button class="mode active" type="button" data-mode="cpu" aria-pressed="true">1P vs CPU</button>
+        <button class="mode" type="button" data-mode="local" aria-pressed="false">1P vs 2P 雙人同機</button>
+        <button class="mode" type="button" data-mode="demo" aria-pressed="false">CPU 觀戰</button>
+      </div>
+      <div class="setup-grid">
+        <div class="panel">
+          <div class="panel-head"><h2>選擇左側角色</h2><div class="panel-tools"><button class="mini" type="button" data-random="1" aria-label="左側隨機選角">🎲 隨機</button><span class="badge p1b" id="p1Badge">1P / CYAN</span></div></div>
+          <div id="p1Roster" class="roster" role="radiogroup" aria-label="左側角色"></div>
+          <div id="p1Detail" class="fighter-detail"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h2>選擇右側角色</h2><div class="panel-tools"><button class="mini" type="button" data-random="2" aria-label="右側隨機選角">🎲 隨機</button><span class="badge p2b" id="p2Badge">CPU / MAGENTA</span></div></div>
+          <div id="p2Roster" class="roster" role="radiogroup" aria-label="右側角色"></div>
+          <div id="p2Detail" class="fighter-detail"></div>
+        </div>
+      </div>
+      <div class="start-row"><span class="hint"><kbd>Enter</kbd> 開始對戰</span><button id="startBtn" class="cta" type="button">FIGHT! 開始對戰</button></div>
     </section>
 
-    <section id="battleScreen" class="screen">
+    <section id="battleScreen" class="screen" aria-label="對戰畫面">
       <div class="battle-wrap">
         <div class="hud">
-          <div class="hud-side"><div id="p1HudName" class="fighter-name"></div><div class="bars"><div class="bar"><div id="p1Hp" class="fill hpfill"></div><span id="p1HpTxt" class="bar-label"></span></div><div class="bar"><div id="p1Mp" class="fill mpfill"></div><span id="p1MpTxt" class="bar-label"></span></div></div></div>
-          <div class="round-box"><div id="roundLabel" class="round">ROUND 1</div><div id="phaseLabel" class="turn">COMMAND</div></div>
-          <div class="hud-side right"><div id="p2HudName" class="fighter-name"></div><div class="bars"><div class="bar"><div id="p2Hp" class="fill hpfill"></div><span id="p2HpTxt" class="bar-label"></span></div><div class="bar"><div id="p2Mp" class="fill mpfill"></div><span id="p2MpTxt" class="bar-label"></span></div></div></div>
+          <div class="hud-side" id="p1Hud">
+            <div class="hud-top"><div id="p1HudName" class="fighter-name"></div><div id="p1Status" class="status-row" aria-live="polite"></div></div>
+            <div class="bars">
+              <div class="bar hp-bar" role="meter" aria-label="1P HP" aria-valuemin="0" id="p1HpBar"><div id="p1HpChip" class="fill chip"></div><div id="p1Hp" class="fill hpfill"></div><div id="p1Shield" class="fill shieldfill"></div><span id="p1HpTxt" class="bar-label"></span></div>
+              <div class="bar mp-bar" role="meter" aria-label="1P MP" aria-valuemin="0" id="p1MpBar"><div id="p1Mp" class="fill mpfill"></div><span id="p1MpTxt" class="bar-label"></span></div>
+            </div>
+          </div>
+          <div class="round-box"><div id="roundLabel" class="round">ROUND 1</div><div id="phaseLabel" class="turn">COMMAND</div><div id="speedLabel" class="speed-badge" hidden></div></div>
+          <div class="hud-side right" id="p2Hud">
+            <div class="hud-top"><div id="p2Status" class="status-row" aria-live="polite"></div><div id="p2HudName" class="fighter-name"></div></div>
+            <div class="bars">
+              <div class="bar hp-bar" role="meter" aria-label="2P HP" aria-valuemin="0" id="p2HpBar"><div id="p2HpChip" class="fill chip"></div><div id="p2Hp" class="fill hpfill"></div><div id="p2Shield" class="fill shieldfill"></div><span id="p2HpTxt" class="bar-label"></span></div>
+              <div class="bar mp-bar" role="meter" aria-label="2P MP" aria-valuemin="0" id="p2MpBar"><div id="p2Mp" class="fill mpfill"></div><span id="p2MpTxt" class="bar-label"></span></div>
+            </div>
+          </div>
         </div>
         <div id="stage" class="stage"><div class="moon"></div><div class="city"></div><div class="floor"></div><div class="versus">VS</div><div class="danger-vignette left" aria-hidden="true"></div><div class="danger-vignette right" aria-hidden="true"></div><div id="fighter1" class="fighter left"></div><div id="fighter2" class="fighter right"></div><div id="sequenceLayer" class="sequence-layer" hidden><svg viewBox="0 0 1000 520" preserveAspectRatio="none" aria-hidden="true"><defs><filter id="g"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><g id="sequenceArt"></g></svg><div id="frameCallout" class="frame-callout"></div></div></div>
         <div class="battle-bottom">
-          <div class="commands"><div class="command-head"><div><div id="commandTitle" class="command-title">1P 選擇行動</div><div id="commandSub" class="command-sub">選好後立即鎖定本回合行動</div></div><div id="waiting" class="waiting">等待 2P 選擇…</div></div><div id="cmdGrid" class="cmd-grid"></div></div>
-          <div id="battleLog" class="log"><h3>BATTLE LOG</h3></div>
+          <div class="commands">
+            <div class="command-head"><div><div id="commandTitle" class="command-title">1P 選擇行動</div><div id="commandSub" class="command-sub">選好後立即鎖定本回合行動</div></div><div id="waiting" class="waiting">等待 2P 選擇…</div></div>
+            <div id="cmdGrid" class="cmd-grid" role="group" aria-label="行動指令"></div>
+          </div>
+          <div id="battleLog" class="log" role="log" aria-live="polite" aria-label="戰鬥紀錄"><h3>BATTLE LOG</h3></div>
         </div>
       </div>
     </section>
   </main>
+  <footer class="site-footer"><span>萌獸鬥技場 Beast Brawl · V10</span><span class="keys"><kbd>1</kbd>–<kbd>5</kbd> 指令 · <kbd>Enter</kbd> 開始／再戰 · <kbd>M</kbd> 靜音 · <kbd>S</kbd> 設定 · <kbd>?</kbd> 說明 · <kbd>Esc</kbd> 關閉</span><a href="https://github.com/xdxd-lab/beast_fighter" rel="noopener">GitHub</a></footer>
 </div>
-<div id="resultOverlay" class="overlay"><div class="modal"><div id="resultKicker" class="eyebrow">BATTLE RESULT</div><h2 id="resultTitle">1P WIN</h2><p id="resultText"></p><div class="modal-actions"><button id="rematchBtn" class="cta">REMATCH</button><button id="backBtn" class="secondary">重新選角</button></div></div></div>
-<div id="refOverlay" class="overlay"><div class="modal ref"><div class="eyebrow">REFERENCE</div><h2 style="font-size:28px">設計參考</h2><p>本原型的格鬥介面只參考「左右對峙、HP 資源條、角色異色、街機式演出」等高層概念。V9 的北極熊與大象依使用者提供的實體布偶照片重新概括輪廓；熊貓只採用「趴睡、扁圓」的廣義概念；水母只採用「圓傘帽＋長觸手＋簡單表情」的廣義概念，所有 SVG 均重新繪製。</p><ul><li>CAPCOM — Street Fighter 6 官方網站：<br><a href="https://www.streetfighter.com/6/" target="_blank" rel="noreferrer">https://www.streetfighter.com/6/</a></li><li>SEGA Retro — Yu Yu Hakusho: Makyou Toitsusen 條目：<br><a href="https://segaretro.org/Yuu_Yuu_Hakusho:_Makyou_Toitsusen" target="_blank" rel="noreferrer">https://segaretro.org/Yuu_Yuu_Hakusho:_Makyou_Toitsusen</a></li></ul><div class="copyright">Prototype v9 — full visual overhaul / cinematic cut-ins / denser in-between motion / advanced impact presentation. Plush references were reinterpreted; copyrighted character references were used only for broad pose and silhouette ideas and were independently redrawn.</div><div class="modal-actions"><button id="closeRef" class="cta">關閉</button></div></div></div>
+
+<div id="resultOverlay" class="overlay" role="dialog" aria-modal="true" aria-labelledby="resultTitle">
+  <div class="modal result">
+    <div id="resultKicker" class="eyebrow">BATTLE RESULT</div>
+    <div id="resultPortrait" class="result-portrait" aria-hidden="true"></div>
+    <h2 id="resultTitle">1P WIN</h2>
+    <p id="resultText"></p>
+    <div id="resultStats" class="result-stats"></div>
+    <div class="modal-actions"><button id="rematchBtn" class="cta" type="button">REMATCH 再戰</button><button id="backBtn" class="secondary" type="button">重新選角</button></div>
+  </div>
+</div>
+
+<div id="settingsOverlay" class="overlay" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+  <div class="modal settings">
+    <div class="eyebrow">SETTINGS</div>
+    <h2 id="settingsTitle">遊戲設定</h2>
+    <fieldset>
+      <legend>聲音</legend>
+      <label class="slider-row"><span>主音量</span><input type="range" min="0" max="100" step="5" data-setting="masterVolume" /><output></output></label>
+      <label class="slider-row"><span>音樂</span><input type="range" min="0" max="100" step="5" data-setting="musicVolume" /><output></output></label>
+      <label class="slider-row"><span>音效</span><input type="range" min="0" max="100" step="5" data-setting="sfxVolume" /><output></output></label>
+      <label class="check-row"><input type="checkbox" data-setting="muted" /><span>全部靜音</span></label>
+    </fieldset>
+    <fieldset>
+      <legend>戰鬥速度</legend>
+      <div class="segmented" role="radiogroup" aria-label="戰鬥速度">
+        <label><input type="radio" name="tempo" value="1" data-setting="tempo" /><span>1×</span></label>
+        <label><input type="radio" name="tempo" value="1.5" data-setting="tempo" /><span>1.5×</span></label>
+        <label><input type="radio" name="tempo" value="2" data-setting="tempo" /><span>2×</span></label>
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend>畫面</legend>
+      <div class="setting-label">特效品質</div>
+      <div class="segmented" role="radiogroup" aria-label="特效品質">
+        <label><input type="radio" name="quality" value="auto" data-setting="quality" /><span>自動</span></label>
+        <label><input type="radio" name="quality" value="high" data-setting="quality" /><span>高</span></label>
+        <label><input type="radio" name="quality" value="low" data-setting="quality" /><span>省電</span></label>
+      </div>
+      <div class="setting-label">減少動態效果</div>
+      <div class="segmented" role="radiogroup" aria-label="減少動態效果">
+        <label><input type="radio" name="reducedMotion" value="auto" data-setting="reducedMotion" /><span>跟隨系統</span></label>
+        <label><input type="radio" name="reducedMotion" value="on" data-setting="reducedMotion" /><span>開</span></label>
+        <label><input type="radio" name="reducedMotion" value="off" data-setting="reducedMotion" /><span>關</span></label>
+      </div>
+    </fieldset>
+    <div class="modal-actions"><button id="resetSettings" class="secondary" type="button">恢復預設</button><button id="closeSettings" class="cta" type="button">完成</button></div>
+  </div>
+</div>
+
+<div id="helpOverlay" class="overlay" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+  <div class="modal help">
+    <div class="eyebrow">HOW TO PLAY</div>
+    <h2 id="helpTitle">操作說明</h2>
+    <div class="help-grid">
+      <section>
+        <h3>規則</h3>
+        <ul>
+          <li>每回合雙方各選一個指令，依<strong>速度</strong>決定先後；「防禦」一定先發動。</li>
+          <li>特殊技能消耗 MP；「凝神」回復 MP。</li>
+          <li>護盾會先吸收傷害；防禦讓本回合承受的傷害降為 55%。</li>
+          <li>失衡的一方下回合無法行動；攻↓、速↓ 持續兩回合。</li>
+        </ul>
+      </section>
+      <section>
+        <h3>快捷鍵</h3>
+        <dl class="keys-list">
+          <dt><kbd>1</kbd>–<kbd>5</kbd></dt><dd>選擇指令</dd>
+          <dt><kbd>Enter</kbd></dt><dd>開始對戰／再戰／失衡時繼續</dd>
+          <dt><kbd>M</kbd></dt><dd>靜音切換</dd>
+          <dt><kbd>S</kbd></dt><dd>設定</dd>
+          <dt><kbd>?</kbd></dt><dd>本說明</dd>
+          <dt><kbd>Esc</kbd></dt><dd>關閉視窗</dd>
+        </dl>
+      </section>
+    </div>
+    <div class="modal-actions"><button id="closeHelp" class="cta" type="button">知道了</button></div>
+  </div>
+</div>
+
+<div id="refOverlay" class="overlay" role="dialog" aria-modal="true" aria-labelledby="refTitle"><div class="modal ref"><div class="eyebrow">REFERENCE</div><h2 id="refTitle" style="font-size:28px">設計參考</h2><p>本原型的格鬥介面只參考「左右對峙、HP 資源條、角色異色、街機式演出」等高層概念。V9 的北極熊與大象依使用者提供的實體布偶照片重新概括輪廓；熊貓只採用「趴睡、扁圓」的廣義概念；水母只採用「圓傘帽＋長觸手＋簡單表情」的廣義概念，所有 SVG 均重新繪製。</p><ul><li>CAPCOM — Street Fighter 6 官方網站：<br><a href="https://www.streetfighter.com/6/" target="_blank" rel="noreferrer">https://www.streetfighter.com/6/</a></li><li>SEGA Retro — Yu Yu Hakusho: Makyou Toitsusen 條目：<br><a href="https://segaretro.org/Yuu_Yuu_Hakusho:_Makyou_Toitsusen" target="_blank" rel="noreferrer">https://segaretro.org/Yuu_Yuu_Hakusho:_Makyou_Toitsusen</a></li></ul><div class="copyright">Prototype v9 — full visual overhaul / cinematic cut-ins / denser in-between motion / advanced impact presentation. Plush references were reinterpreted; copyrighted character references were used only for broad pose and silhouette ideas and were independently redrawn.</div><div class="modal-actions"><button id="closeRef" class="cta" type="button">關閉</button></div></div></div>
+
 <script src="js/core/settings.js"></script>
 <script src="js/data/roster.js"></script>
 <script src="js/core/engine.js"></script>

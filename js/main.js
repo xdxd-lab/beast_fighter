@@ -103,9 +103,12 @@
     waiting: $('#waiting'),
     phaseLabel: $('#phaseLabel'),
     roundLabel: $('#roundLabel'),
+    speedLabel: $('#speedLabel'),
     battleLog: $('#battleLog'),
     resultOverlay: $('#resultOverlay'),
     refOverlay: $('#refOverlay'),
+    settingsOverlay: $('#settingsOverlay'),
+    helpOverlay: $('#helpOverlay'),
     sequence: {
       layer: $('#sequenceLayer'),
       art: $('#sequenceArt'),
@@ -113,7 +116,12 @@
     },
     hud: [1, 2].map((p) => ({
       name: $(`#p${p}HudName`),
+      status: $(`#p${p}Status`),
+      hpBar: $(`#p${p}HpBar`),
+      mpBar: $(`#p${p}MpBar`),
       hp: $(`#p${p}Hp`),
+      chip: $(`#p${p}HpChip`),
+      shield: $(`#p${p}Shield`),
       mp: $(`#p${p}Mp`),
       hpText: $(`#p${p}HpTxt`),
       mpText: $(`#p${p}MpTxt`),
@@ -121,58 +129,138 @@
   };
 
   /* ------------------------------------------------------------------ app state */
+  const params = new URLSearchParams(location.search);
+  const MODES = ['cpu', 'local', 'demo'];
   const app = {
-    mode: 'cpu',          // 'cpu' | 'local'
+    mode: MODES.includes(params.get('mode')) ? params.get('mode') : 'cpu', // 'cpu' | 'local' | 'demo'
     selection: [0, 1],    // roster index per side
     palettes: [0, 0],     // palette index per side
+    seed: params.has('seed') ? Number(params.get('seed')) >>> 0 : null, // reproducible battles (QA)
+    speedOverride: [1, 1.5, 2, 4].includes(Number(params.get('speed'))) ? Number(params.get('speed')) : null,
   };
 
   /** Current battle session: engine state + UI-only flags. */
   let battle = null;
 
-  const sideLabel = (side) => (side === 0 ? '1P' : app.mode === 'cpu' ? 'CPU' : '2P');
+  /** Reflects the high-level game state on <html> for CSS hooks and automated tests. */
+  function setGameState(name, extra = {}) {
+    const ds = document.documentElement.dataset;
+    ds.gameState = name;
+    Object.entries(extra).forEach(([k, v]) => { ds[k] = String(v); });
+  }
+
+  const sideLabel = (side) => {
+    if (app.mode === 'demo') return side === 0 ? 'CPU 1' : 'CPU 2';
+    return side === 0 ? '1P' : app.mode === 'cpu' ? 'CPU' : '2P';
+  };
+  const isCpu = (side) => app.mode === 'demo' || (side === 1 && app.mode === 'cpu');
+  const currentTempo = () => app.speedOverride || Settings.get('tempo');
+
+  const TYPE_LABEL = {
+    damage: '物理', magic: '魔法', pierce: '貫穿', stun: '失衡', slow: '減速', weaken: '削弱',
+    heal: '治療', shield: '護盾', guard: '防禦', focus: '回復', poison: '中毒',
+  };
+  const STAT_MAX = ['hp', 'mp', 'atk', 'def', 'spd'].reduce((o, k) => ({ ...o, [k]: Math.max(...CHARACTERS.map((c) => c[k])) }), {});
 
   /* ================================================================== select */
+  /** Builds the roster cards for one side (only needed when that side's palette changes). */
   function renderRoster(player) {
     const box = $(`#p${player}Roster`);
-    box.innerHTML = '';
-    CHARACTERS.forEach((c, i) => {
-      const el = document.createElement('button');
-      el.className = 'char-card' + (app.selection[player - 1] === i ? ' selected' : '');
-      el.innerHTML = `<div class="portrait">${fighterSVG(c, app.palettes[player - 1])}</div><h3>${c.name}・${c.animal}</h3><small>${c.job}</small>`;
-      el.onclick = () => {
-        app.selection[player - 1] = i;
-        if (player === 2 && app.selection[0] === app.selection[1] && app.palettes[0] === app.palettes[1]) app.palettes[1] = 1 - app.palettes[0];
-        renderAllSelect();
-      };
-      box.appendChild(el);
+    const pi = app.palettes[player - 1];
+    box.innerHTML = CHARACTERS.map((c, i) => `<button class="char-card" type="button" role="radio" data-index="${i}" aria-label="${c.name}・${c.animal}（${c.job}）"><div class="portrait">${fighterSVG(c, pi)}</div><h3>${c.name}・${c.animal}</h3><small>${c.job}</small></button>`).join('');
+    syncRosterSelection(player);
+  }
+
+  function syncRosterSelection(player) {
+    $$(`#p${player}Roster .char-card`).forEach((el, i) => {
+      const on = app.selection[player - 1] === i;
+      el.classList.toggle('selected', on);
+      el.setAttribute('aria-checked', String(on));
+      el.tabIndex = on ? 0 : -1;
     });
-    renderDetail(player);
+  }
+
+  function statBar(label, value, key) {
+    const pct = Math.round((value / STAT_MAX[key]) * 100);
+    return `<div class="stat"><div class="stat-head"><span>${label}</span><b>${value}</b></div><div class="stat-bar"><i style="--v:${pct}%"></i></div></div>`;
   }
 
   function renderDetail(player) {
     const c = CHARACTERS[app.selection[player - 1]];
     const pi = app.palettes[player - 1];
     const box = $(`#p${player}Detail`);
-    box.innerHTML = `<div class="big-portrait">${fighterSVG(c, pi)}</div><div class="detail"><div class="job">${c.job}</div><h3>${c.name}・${c.animal}</h3><div class="passive">${c.passive}</div><div class="stats"><div class="stat"><b>${c.hp}</b><span>HP</span></div><div class="stat"><b>${c.mp}</b><span>MP</span></div><div class="stat"><b>${c.atk}</b><span>ATK</span></div><div class="stat"><b>${c.def}</b><span>DEF</span></div><div class="stat"><b>${c.spd}</b><span>SPD</span></div></div><div class="palette-row"><span style="font-size:11px;color:var(--muted)">異色造型</span><button class="palette ${pi === 0 ? 'active' : ''}" data-p="0">COLOR A</button><button class="palette ${pi === 1 ? 'active' : ''}" data-p="1">COLOR B</button></div></div>`;
-    box.querySelectorAll('.palette').forEach((b) => {
-      b.onclick = () => {
-        app.palettes[player - 1] = +b.dataset.p;
-        if (app.selection[0] === app.selection[1] && app.palettes[0] === app.palettes[1]) app.palettes[player === 1 ? 1 : 0] = 1 - app.palettes[player - 1];
-        renderAllSelect();
-      };
-    });
+    const skills = c.skills.map((s) => `<li><span class="tag t-${s.type}">${TYPE_LABEL[s.type] || s.type}</span><b>${s.name}</b>${s.cost ? `<span class="cost-pill">${s.cost} MP</span>` : '<span class="cost-pill free">免費</span>'}<small>${s.desc}</small></li>`).join('');
+    box.innerHTML = `<div class="big-portrait">${fighterSVG(c, pi)}</div><div class="detail"><div class="job">${c.job}</div><h3>${c.name}・${c.animal}</h3><div class="passive">${c.passive}</div><div class="stats">${statBar('HP', c.hp, 'hp')}${statBar('MP', c.mp, 'mp')}${statBar('ATK', c.atk, 'atk')}${statBar('DEF', c.def, 'def')}${statBar('SPD', c.spd, 'spd')}</div><ul class="skill-list">${skills}</ul><div class="palette-row"><span class="palette-label">異色造型</span><button class="palette ${pi === 0 ? 'active' : ''}" type="button" data-p="0" aria-pressed="${pi === 0}">COLOR A</button><button class="palette ${pi === 1 ? 'active' : ''}" type="button" data-p="1" aria-pressed="${pi === 1}">COLOR B</button></div></div>`;
+  }
+
+  /** Mirror matches must not share a palette; returns the sides whose palette changed. */
+  function resolvePaletteClash(changedSide) {
+    if (app.selection[0] !== app.selection[1] || app.palettes[0] !== app.palettes[1]) return [];
+    const other = changedSide === 0 ? 1 : 0;
+    app.palettes[other] = 1 - app.palettes[changedSide];
+    return [other];
+  }
+
+  function selectCharacter(player, index) {
+    app.selection[player - 1] = index;
+    const changed = resolvePaletteClash(player - 1);
+    changed.forEach((side) => { renderRoster(side + 1); renderDetail(side + 1); });
+    syncRosterSelection(player);
+    renderDetail(player);
+  }
+
+  function selectPalette(player, pi) {
+    app.palettes[player - 1] = pi;
+    const changed = resolvePaletteClash(player - 1);
+    [player - 1, ...changed].forEach((side) => { renderRoster(side + 1); renderDetail(side + 1); });
   }
 
   function renderAllSelect() {
-    renderRoster(1);
-    renderRoster(2);
+    [1, 2].forEach((p) => { renderRoster(p); renderDetail(p); });
   }
 
   function setMode(mode) {
     app.mode = mode;
-    $$('.mode').forEach((x) => x.classList.toggle('active', x.dataset.mode === mode));
-    $('#p2Badge').textContent = mode === 'cpu' ? 'CPU / MAGENTA' : '2P / MAGENTA';
+    $$('.mode').forEach((x) => {
+      const on = x.dataset.mode === mode;
+      x.classList.toggle('active', on);
+      x.setAttribute('aria-pressed', String(on));
+    });
+    $('#p1Badge').textContent = mode === 'demo' ? 'CPU 1 / CYAN' : '1P / CYAN';
+    $('#p2Badge').textContent = mode === 'cpu' ? 'CPU / MAGENTA' : mode === 'demo' ? 'CPU 2 / MAGENTA' : '2P / MAGENTA';
+    $('#startBtn').textContent = mode === 'demo' ? 'WATCH! 開始觀戰' : 'FIGHT! 開始對戰';
+  }
+
+  function wireSelectScreen() {
+    [1, 2].forEach((player) => {
+      const roster = $(`#p${player}Roster`);
+      roster.addEventListener('click', (e) => {
+        const card = e.target.closest('.char-card');
+        if (card) selectCharacter(player, Number(card.dataset.index));
+      });
+      // Arrow keys move through the radio group (roving tabindex).
+      roster.addEventListener('keydown', (e) => {
+        const delta = { ArrowRight: 1, ArrowDown: 3, ArrowLeft: -1, ArrowUp: -3 }[e.key];
+        if (delta === undefined) return;
+        e.preventDefault();
+        const next = (app.selection[player - 1] + delta + CHARACTERS.length) % CHARACTERS.length;
+        selectCharacter(player, next);
+        $(`#p${player}Roster .char-card[data-index="${next}"]`).focus();
+      });
+      $(`#p${player}Detail`).addEventListener('click', (e) => {
+        const b = e.target.closest('.palette');
+        if (b) selectPalette(player, Number(b.dataset.p));
+      });
+    });
+    $$('[data-random]').forEach((b) => {
+      b.onclick = () => {
+        const player = Number(b.dataset.random);
+        let next = Math.floor(Math.random() * CHARACTERS.length);
+        if (next === app.selection[player - 1]) next = (next + 1) % CHARACTERS.length;
+        selectCharacter(player, next);
+      };
+    });
+    $$('.mode').forEach((b) => { b.onclick = () => setMode(b.dataset.mode); });
   }
 
   /* ================================================================== stage FX */
@@ -204,14 +292,14 @@
 
   function clearFighterVisualState() {
     dom.fighters.forEach((el, side) => {
-      el.classList.remove(...POSE_CLASSES, ...FRAME_CLASSES, 'low-hp');
+      el.classList.remove(...POSE_CLASSES, ...FRAME_CLASSES, 'low-hp', 'guarding', 'has-shield', 'shield-hit');
       el.removeAttribute('data-char');
       currentPose[side] = '';
       currentFrame[side] = -1;
     });
     $$(TRANSIENT_FX, dom.stage).forEach((el) => el.remove());
     dom.sequence.layer.hidden = true;
-    dom.stage.classList.remove('shake', 'zoom-left', 'zoom-right', 'ko-freeze');
+    dom.stage.classList.remove('shake', 'shake-heavy', 'zoom-left', 'zoom-right', 'ko-freeze', 'danger-left', 'danger-right');
   }
 
   function setPose(side, pose = 'idle') {
@@ -481,11 +569,12 @@
     { opacity: 1, transform: 'translateX(-50%) scale(1)' },
   ];
 
-  function fxText(side, text, cls = 'damage') {
+  /** Floating combat text; `row` stacks simultaneous popups so they never overlap. */
+  function fxText(side, text, cls = 'damage', row = 0) {
     spawnTransient(`fx fx-text ${cls}`, (el) => {
       el.textContent = text;
-      el.style.left = side === 0 ? '23%' : '68%';
-      el.style.top = '35%';
+      el.style.left = side === 0 ? '22%' : '67%';
+      el.style.top = `${33 - row * 8}%`;
     }, 900);
   }
 
@@ -495,19 +584,23 @@
 
   /* ================================================================== battle flow */
   function startBattle() {
+    closeAllOverlays();
     const c1 = CHARACTERS[app.selection[0]];
     const c2 = CHARACTERS[app.selection[1]];
     if (c1.id === c2.id && app.palettes[0] === app.palettes[1]) app.palettes[1] = 1 - app.palettes[0];
     if (battle) battle.dispose();
     clearFighterVisualState();
-    battle = new BattleSession(Engine.createBattle({ characters: [c1, c2], palettes: app.palettes.slice() }));
+    const rng = app.seed !== null ? Engine.createRng(app.seed) : Math.random;
+    battle = new BattleSession(Engine.createBattle({ characters: [c1, c2], palettes: app.palettes.slice(), rng }));
+    battle.tempo = currentTempo();
+    syncSpeedBadge();
     Audio.music('battle');
     particles.clear();
     particles.setAmbient(true);
     dom.selectScreen.classList.remove('active');
     dom.battleScreen.classList.add('active');
-    dom.resultOverlay.classList.remove('show');
     dom.battleLog.innerHTML = '<h3>BATTLE LOG</h3>';
+    setGameState('battle', { mode: app.mode });
     renderBattle();
     beginRound();
   }
@@ -519,38 +612,67 @@
       el.dataset.char = f.character.id;
       el.innerHTML = `<div class="shield-bubble" aria-hidden="true"></div>${fighterSVG(f.character, f.paletteIndex)}${GUARD_BARRIER}<div class="expression"><i></i><i></i><b></b></div><div class="pose-icon"></div><div class="nameplate">${f.character.name}・${f.character.job}</div>`;
       setPose(i, 'idle');
+      const h = dom.hud[i];
+      h.name.textContent = `${sideLabel(i)} ${f.character.name} / ${f.character.job}`;
+      h.hpBar.setAttribute('aria-label', `${sideLabel(i)} HP`);
+      h.mpBar.setAttribute('aria-label', `${sideLabel(i)} MP`);
+      h.hpBar.setAttribute('aria-valuemax', f.maxHp);
+      h.mpBar.setAttribute('aria-valuemax', f.maxMp);
     });
-    dom.hud[0].name.textContent = `1P ${fighters[0].character.name} / ${fighters[0].character.job}`;
-    dom.hud[1].name.textContent = `${sideLabel(1)} ${fighters[1].character.name} / ${fighters[1].character.job}`;
     updateHUD();
     announceRound(1);
   }
 
+  const STATUS_CHIPS = [
+    { test: (f) => f.shield > 0, cls: 'st-shield', text: (f) => `🛡 ${f.shield}`, title: (f) => `護盾：先吸收 ${f.shield} 點傷害` },
+    { test: (f) => f.guard, cls: 'st-guard', text: () => '防禦', title: () => '本回合承受傷害 -45%' },
+    { test: (f) => f.weaken > 0, cls: 'st-debuff', text: (f) => `攻↓${f.weaken}`, title: (f) => `攻擊 -20%，剩 ${f.weaken} 回合` },
+    { test: (f) => f.slow > 0, cls: 'st-debuff', text: (f) => `速↓${f.slow}`, title: (f) => `速度 -3，剩 ${f.slow} 回合` },
+    { test: (f) => f.stun, cls: 'st-stun', text: () => '失衡', title: () => '下回合無法行動' },
+    { test: (f) => f.poison > 0, cls: 'st-debuff', text: (f) => `毒${f.poison}`, title: (f) => `每回合 -5 HP，剩 ${f.poison} 回合` },
+  ];
+
   function updateHUD() {
+    const ended = battle.state.ended;
     battle.state.fighters.forEach((f, i) => {
       const h = dom.hud[i];
-      const ratio = f.hp / f.maxHp;
-      h.hp.style.transform = `scaleX(${Math.max(0, ratio)})`;
+      const ratio = Math.max(0, f.hp / f.maxHp);
+      h.hp.style.transform = `scaleX(${ratio})`;
+      h.chip.style.transform = `scaleX(${ratio})`;
+      h.shield.style.transform = `scaleX(${Math.min(1, f.shield / f.maxHp)})`;
       h.mp.style.transform = `scaleX(${Math.max(0, f.mp / f.maxMp)})`;
-      h.hpText.textContent = `HP ${Math.max(0, f.hp)} / ${f.maxHp}${f.shield ? ` +${f.shield}盾` : ''}`;
+      h.hpBar.dataset.level = ratio > 0.5 ? 'high' : ratio > 0.25 ? 'mid' : 'low';
+      h.hpBar.setAttribute('aria-valuenow', Math.max(0, f.hp));
+      h.mpBar.setAttribute('aria-valuenow', f.mp);
+      h.hpText.textContent = `HP ${Math.max(0, f.hp)} / ${f.maxHp}`;
       h.mpText.textContent = `MP ${f.mp} / ${f.maxMp}`;
+      const chips = ended ? [] : STATUS_CHIPS.filter((c) => c.test(f));
+      const html = chips.map((c) => `<span class="status ${c.cls}" title="${c.title(f)}">${c.text(f)}</span>`).join('');
+      if (h.status.innerHTML !== html) h.status.innerHTML = html;
       const el = dom.fighters[i];
       el.classList.toggle('low-hp', ratio > 0 && ratio < 0.3);
-      el.classList.toggle('has-shield', f.shield > 0);
+      el.classList.toggle('has-shield', f.shield > 0 && !ended);
       el.style.setProperty('--shield', Math.min(1, f.shield / 50).toFixed(2));
-      el.classList.toggle('guarding', f.guard && !battle.state.ended);
+      el.classList.toggle('guarding', f.guard && !ended);
       dom.stage.classList.toggle(i === 0 ? 'danger-left' : 'danger-right', ratio > 0 && ratio < 0.3);
     });
     dom.roundLabel.textContent = `ROUND ${battle.state.round}`;
   }
 
+  function syncSpeedBadge() {
+    const tempo = battle ? battle.tempo : currentTempo();
+    dom.speedLabel.hidden = tempo === 1;
+    dom.speedLabel.textContent = `${tempo}× SPEED`;
+  }
+
   function beginRound() {
-    const state = battle.state;
+    const session = battle;
+    const state = session.state;
     if (state.ended) return;
-    battle.locked = [null, null];
-    battle.busy = false;
+    session.locked = [null, null];
+    session.busy = false;
     Engine.startRound(state).forEach((ev) => {
-      log(`${state.fighters[ev.side].character.name} 受到中毒傷害 ${ev.poison} 點。`);
+      log(`${state.fighters[ev.side].character.name} 受到中毒傷害 ${ev.poison} 點。`, 'dmg');
       fxDamage(ev.side, ev.poison, '☠');
     });
     updateHUD();
@@ -558,31 +680,57 @@
     setPose(0, 'idle');
     setPose(1, 'idle');
     if (state.round > 1) announceRound(state.round);
+    if (app.mode === 'demo') {
+      showSpectatorPanel();
+      session.later(() => chooseAction(0, Engine.cpuChooseAction(state, 0, UTILITY_SKILLS)), 650);
+      return;
+    }
     setPrompt(0);
     renderCommands(0);
   }
 
+  function showSpectatorPanel() {
+    dom.commandTitle.textContent = 'CPU 觀戰模式';
+    dom.commandSub.textContent = '雙方由 CPU 操作；可在設定調整戰鬥速度';
+    dom.waiting.classList.remove('show');
+    dom.phaseLabel.textContent = 'COMMAND';
+    dom.cmdGrid.innerHTML = '<div class="cmd-note">CPU 思考中…</div>';
+  }
+
   function setPrompt(side) {
     dom.commandTitle.textContent = `${sideLabel(side)} 選擇行動`;
-    dom.commandSub.textContent = app.mode === 'local' && side === 1 ? '請 1P 先不要偷看 2P 的選擇' : '技能會顯示 MP 消耗與效果';
+    dom.commandSub.textContent = app.mode === 'local' && side === 1 ? '請 1P 先不要偷看 2P 的選擇' : '點選或按數字鍵 1–5；技能會顯示 MP 消耗與效果';
     dom.waiting.classList.toggle('show', app.mode === 'local' && side === 1);
     dom.phaseLabel.textContent = 'COMMAND';
+    dom.cmdGrid.dataset.side = String(side);
+  }
+
+  function commandMeta(s) {
+    if (s.type === 'heal') return `回復 ${s.power} HP`;
+    if (s.type === 'shield') return `護盾 ${s.power}`;
+    if (s.power && !Engine.isSupport(s)) return `威力 ${s.power} · 命中 ${s.acc}%`;
+    return '';
   }
 
   function renderCommands(side) {
     const f = battle.state.fighters[side];
     const box = dom.cmdGrid;
-    box.innerHTML = '';
     if (f.stun) {
-      box.innerHTML = '<button class="cmd" id="stunSkip"><b>失衡中</b><small>本回合無法行動，點擊繼續。</small></button>';
+      box.innerHTML = '<button class="cmd stun-skip" id="stunSkip" type="button"><span class="key">Enter</span><b>失衡中</b><small>本回合無法行動，點擊或按 Enter 繼續。</small></button>';
       $('#stunSkip').onclick = () => chooseAction(side, Engine.takeStunnedTurn(battle.state, side));
       return;
     }
-    Engine.commandsFor(f, UTILITY_SKILLS).forEach((s) => {
+    box.innerHTML = '';
+    Engine.commandsFor(f, UTILITY_SKILLS).forEach((s, i) => {
       const b = document.createElement('button');
-      b.className = 'cmd';
-      b.disabled = battle.busy || f.mp < s.cost;
-      b.innerHTML = `${s.cost ? `<span class="cost">${s.cost} MP</span>` : ''}<b>${s.name}</b><small>${s.desc}</small>`;
+      const short = f.mp < s.cost;
+      const meta = commandMeta(s);
+      b.type = 'button';
+      b.className = `cmd t-${s.type}${Engine.isSuperSkill(s) ? ' super' : ''}`;
+      b.disabled = battle.busy || short;
+      b.dataset.key = String(i + 1);
+      b.innerHTML = `<span class="key" aria-hidden="true">${i + 1}</span>${s.cost ? `<span class="cost">${s.cost} MP</span>` : ''}<span class="tag t-${s.type}">${TYPE_LABEL[s.type] || ''}</span><b>${s.name}</b><small>${s.desc}</small>${meta ? `<em class="meta">${meta}</em>` : ''}${short ? '<em class="short">MP 不足</em>' : ''}`;
+      b.setAttribute('aria-label', `${i + 1}. ${s.name}${s.cost ? `，消耗 ${s.cost} MP` : ''}。${s.desc}${short ? '（MP 不足）' : ''}`);
       b.onclick = () => chooseAction(side, s);
       box.appendChild(b);
     });
@@ -591,9 +739,9 @@
   function chooseAction(side, skill) {
     if (!battle || battle.busy || battle.state.ended) return;
     battle.locked[side] = skill;
-    log(`${sideLabel(side)} 已鎖定行動。`);
+    log(`${sideLabel(side)} 已鎖定行動。`, 'sys');
     if (side === 0) {
-      if (app.mode === 'cpu') {
+      if (isCpu(1)) {
         battle.locked[1] = Engine.cpuChooseAction(battle.state, 1, UTILITY_SKILLS);
         resolveRound().catch(ignoreAbort);
       } else {
@@ -610,7 +758,7 @@
     const state = session.state;
     session.busy = true;
     dom.waiting.classList.remove('show');
-    dom.cmdGrid.innerHTML = '<button class="cmd" disabled><b>結算中…</b><small>依速度與技能優先度處理</small></button>';
+    dom.cmdGrid.innerHTML = '<div class="cmd-note">結算中…依速度與技能優先度處理</div>';
     dom.phaseLabel.textContent = 'RESOLVE';
     const order = Engine.resolveTurnOrder(state, session.locked);
     for (const side of order) {
@@ -628,7 +776,8 @@
 
   /** Resolves one command with the engine, then animates the outcome. */
   async function presentAction(side, skill) {
-    const state = battle.state;
+    const session = battle;
+    const state = session.state;
     const me = state.fighters[side];
     const op = state.fighters[1 - side];
     const outcome = Engine.resolveAction(state, side, skill);
@@ -636,29 +785,32 @@
 
     switch (outcome.kind) {
       case 'skip':
-        log(`${me.character.name} 因失衡錯過行動。`);
+        log(`${me.character.name} 因失衡錯過行動。`, 'sys');
+        fxText(side, 'STUN…', 'miss');
         return;
       case 'focus':
         await playFiveFrameAction(side, s, true);
-        log(`${me.character.name} 凝神，回復 ${outcome.mpGain} MP${outcome.hpGain ? `，並因被動回復 ${outcome.hpGain} HP` : ''}。`);
-        fxDamage(side, -outcome.mpGain, '✦');
-        if (outcome.hpGain) fxText(side, `+${outcome.hpGain} HP`, 'heal');
+        log(`${me.character.name} 凝神，回復 ${outcome.mpGain} MP${outcome.hpGain ? `，並因被動回復 ${outcome.hpGain} HP` : ''}。`, 'buff');
+        fxText(side, `+${outcome.mpGain} MP`, 'mp');
+        if (outcome.hpGain) session.later(() => fxText(side, `+${outcome.hpGain} HP`, 'heal', 1), 160);
         return;
       case 'guard':
         await playFiveFrameAction(side, s, true);
         setPose(side, 'guard');
-        log(`${me.character.name} 進入防禦架勢。`);
+        updateHUD();
+        log(`${me.character.name} 進入防禦架勢。`, 'buff');
         return;
       case 'shield':
         if (Engine.isSuperSkill(s)) await showCutin(side, s);
         await playFiveFrameAction(side, s, true);
-        log(`${me.character.name} 使用「${s.name}」，獲得 ${outcome.shieldGain} 點護盾${me.character.id === 'jelly' ? '（無骨重甲強化）' : ''}。`);
-        fxDamage(side, -outcome.shieldGain, '🛡');
+        updateHUD();
+        log(`${me.character.name} 使用「${s.name}」，獲得 ${outcome.shieldGain} 點護盾${me.character.id === 'jelly' ? '（無骨重甲強化）' : ''}。`, 'buff');
+        fxText(side, `+${outcome.shieldGain} 🛡`, 'shield');
         return;
       case 'heal':
         if (Engine.isSuperSkill(s)) await showCutin(side, s);
         await playFiveFrameAction(side, s, true);
-        log(`${me.character.name} 使用「${s.name}」，回復 ${outcome.hpGain} HP。`);
+        log(`${me.character.name} 使用「${s.name}」，回復 ${outcome.hpGain} HP。`, 'heal');
         fxText(side, `+${outcome.hpGain} HP`, 'heal');
         return;
       default:
@@ -670,19 +822,25 @@
     if (!outcome.hit) {
       Audio.skill(s, 'miss', { pan: pan(1 - side) });
       spawnStageFlash('rgba(255,255,255,.16)', side === 0 ? '76% 48%' : '24% 48%');
-      log(`${me.character.name} 的「${s.name}」落空！`);
+      log(`${me.character.name} 的「${s.name}」落空！`, 'sys');
       fxText(1 - side, 'MISS', 'miss');
       return;
     }
-    log(`${me.character.name} 使用「${s.name}」造成 ${outcome.damage}${outcome.absorbed ? `（護盾吸收 ${outcome.absorbed}）` : ''} 點傷害${outcome.crit ? '，暴擊！' : ''}`);
+    log(`${me.character.name} 使用「${s.name}」造成 ${outcome.damage}${outcome.absorbed ? `（護盾吸收 ${outcome.absorbed}）` : ''} 點傷害${outcome.crit ? '，暴擊！' : ''}`, outcome.crit ? 'crit' : 'dmg');
     if (outcome.crit) spawnImpactBurst(1 - side, 'rgba(255,221,117,.56)', 'CRIT');
-    fxDamage(1 - side, outcome.damage, outcome.crit ? 'CRIT!' : 'HIT!');
-    if (outcome.statuses.includes('poison')) log(`${op.character.name} 中毒了，持續 3 回合。`);
-    if (outcome.statuses.includes('weaken')) log(`${op.character.name} 的攻擊暫時下降。`);
-    if (outcome.statuses.includes('slow')) log(`${op.character.name} 的速度暫時下降。`);
+    if (outcome.absorbed) {
+      const a = fighterAnchor(1 - side);
+      particles.ring(a.x, a.y, '#bdf3ff', 60, 120, 0.4, 5);
+      restartClass(dom.fighters[1 - side], 'shield-hit', 360);
+    }
+    if (outcome.damage > 0) fxText(1 - side, `-${outcome.damage}${outcome.crit ? ' CRIT!' : ''}`, outcome.crit ? 'crit' : 'damage');
+    if (outcome.absorbed) fxText(1 - side, outcome.damage > 0 ? `🛡 -${outcome.absorbed}` : `🛡 BLOCK ${outcome.absorbed}`, 'shield', outcome.damage > 0 ? 1 : 0);
+    if (outcome.statuses.includes('poison')) log(`${op.character.name} 中毒了，持續 3 回合。`, 'debuff');
+    if (outcome.statuses.includes('weaken')) log(`${op.character.name} 的攻擊暫時下降。`, 'debuff');
+    if (outcome.statuses.includes('slow')) log(`${op.character.name} 的速度暫時下降。`, 'debuff');
     if (outcome.statuses.includes('stun')) {
-      log(`${op.character.name} 失衡！下回合無法行動。`);
-      fxText(1 - side, 'STUN', 'crit');
+      log(`${op.character.name} 失衡！下回合無法行動。`, 'debuff');
+      session.later(() => fxText(1 - side, 'STUN!', 'crit', 2), 120);
       Audio.sfx('stun', { pan: pan(1 - side) });
     }
   }
@@ -699,11 +857,12 @@
     setPose(loser, 'ko');
     setPose(winner, 'victory');
     dom.phaseLabel.textContent = 'K.O.';
+    dom.cmdGrid.innerHTML = '<div class="cmd-note">K.O.！</div>';
     cinematicStage(winner, 720, true);
     spawnStageFlash('rgba(255,108,112,.42)', '50% 48%');
     spawnImpactBurst(loser, 'rgba(255,108,112,.5)', 'K.O.');
     particles.ko(loser);
-    dom.fighters.forEach((el) => el.classList.remove('guarding', 'has-shield'));
+    updateHUD();
     battle.later(() => particles.confetti(winner), 900);
     stageBanner('K.O.', '', true);
     Audio.sfx('ko');
@@ -713,18 +872,33 @@
     return true;
   }
 
+  const RESULT_ROWS = [
+    ['總傷害', 'damageDealt'], ['最大一擊', 'biggestHit'], ['暴擊', 'crits'], ['落空', 'misses'], ['治療', 'healed'], ['護盾', 'shielded'],
+  ];
+
   function showResult(winner) {
-    const w = battle.state.fighters[winner];
-    $('#resultTitle').textContent = `${sideLabel(winner)} WIN!`;
-    $('#resultText').textContent = `${w.character.name}・${w.character.job} 取得勝利，共進行 ${battle.state.round} 回合。`;
-    dom.resultOverlay.classList.add('show');
+    const state = battle.state;
+    const w = state.fighters[winner];
+    const l = state.fighters[1 - winner];
+    const [s0, s1] = state.stats;
+    const title = $('#resultTitle');
+    title.textContent = `${sideLabel(winner)} WIN!`;
+    title.className = winner === 0 ? 'p1-win' : 'p2-win';
+    $('#resultText').textContent = `${w.character.name}・${w.character.job} 擊敗 ${l.character.name}，共進行 ${state.round} 回合，剩餘 HP ${w.hp} / ${w.maxHp}。`;
+    $('#resultPortrait').innerHTML = fighterSVG(w.character, w.paletteIndex);
+    const head = `<tr><th scope="col"></th><th scope="col" class="p1c">${sideLabel(0)} ${state.fighters[0].character.name}</th><th scope="col" class="p2c">${sideLabel(1)} ${state.fighters[1].character.name}</th></tr>`;
+    const body = RESULT_ROWS.map(([label, key]) => `<tr><th scope="row">${label}</th><td class="${key !== 'misses' && s0[key] > s1[key] ? 'lead' : ''}">${s0[key]}</td><td class="${key !== 'misses' && s1[key] > s0[key] ? 'lead' : ''}">${s1[key]}</td></tr>`).join('');
+    $('#resultStats').innerHTML = `<table><thead>${head}</thead><tbody>${body}</tbody></table>`;
+    setGameState('result', { winner, rounds: state.round });
+    openOverlay(dom.resultOverlay, $('#rematchBtn'));
   }
 
   const LOG_LIMIT = 80;
 
-  function log(text) {
+  /** @param {string} text @param {''|'sys'|'dmg'|'crit'|'heal'|'buff'|'debuff'} [kind] */
+  function log(text, kind = '') {
     const e = document.createElement('div');
-    e.className = 'log-entry';
+    e.className = `log-entry${kind ? ` log-${kind}` : ''}`;
     e.textContent = `R${battle ? battle.state.round : 1}｜${text}`;
     dom.battleLog.appendChild(e);
     const entries = dom.battleLog.getElementsByClassName('log-entry');
@@ -734,26 +908,143 @@
 
   function backSelect() {
     if (battle) battle.dispose();
+    closeAllOverlays();
     clearFighterVisualState();
     dom.battleScreen.classList.remove('active');
     dom.selectScreen.classList.add('active');
-    dom.resultOverlay.classList.remove('show');
     battle = null;
     particles.setAmbient(false);
     particles.clear();
     Audio.music('select');
+    setGameState('select');
     renderAllSelect();
   }
 
+  /* ================================================================== overlays */
+  const OVERLAYS = () => [dom.resultOverlay, dom.refOverlay, dom.settingsOverlay, dom.helpOverlay];
+  const overlayStack = [];
+
+  /** Opens a modal dialog, remembers the trigger and moves focus inside. */
+  function openOverlay(el, focusEl) {
+    if (!el.classList.contains('show')) {
+      overlayStack.push({ el, returnTo: document.activeElement });
+      el.classList.add('show');
+    }
+    const target = focusEl || el.querySelector('button, input, a[href]');
+    if (target) setTimeout(() => target.focus({ preventScroll: true }), 30);
+  }
+
+  function closeOverlay(el) {
+    if (!el.classList.contains('show')) return;
+    el.classList.remove('show');
+    const i = overlayStack.findIndex((o) => o.el === el);
+    const entry = i >= 0 ? overlayStack.splice(i, 1)[0] : null;
+    if (entry && entry.returnTo && document.contains(entry.returnTo)) entry.returnTo.focus({ preventScroll: true });
+  }
+
+  function closeAllOverlays() {
+    OVERLAYS().forEach((el) => el.classList.remove('show'));
+    overlayStack.length = 0;
+  }
+
+  const topOverlay = () => (overlayStack.length ? overlayStack[overlayStack.length - 1].el : null);
+
+  /** Keeps Tab focus inside the open dialog. */
+  function trapFocus(e) {
+    const el = topOverlay();
+    if (!el || e.key !== 'Tab') return;
+    const items = $$('button:not([disabled]), input:not([disabled]), a[href]', el).filter((x) => x.offsetParent !== null);
+    if (!items.length) return;
+    const first = items[0];
+    const last = items[items.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  }
+
+  /* ------------------------------------------------------------------ settings panel */
+  function syncSettingsForm() {
+    $$('[data-setting]', dom.settingsOverlay).forEach((input) => {
+      const key = input.dataset.setting;
+      const value = Settings.get(key);
+      if (input.type === 'range') {
+        input.value = Math.round(value * 100);
+        input.nextElementSibling.textContent = `${input.value}%`;
+      } else if (input.type === 'checkbox') {
+        input.checked = !!value;
+      } else if (input.type === 'radio') {
+        input.checked = String(value) === input.value;
+      }
+    });
+  }
+
+  function wireSettings() {
+    dom.settingsOverlay.addEventListener('input', (e) => {
+      const input = e.target.closest('[data-setting]');
+      if (!input) return;
+      const key = input.dataset.setting;
+      if (input.type === 'range') Settings.set(key, Number(input.value) / 100);
+      else if (input.type === 'checkbox') Settings.set(key, input.checked);
+      else if (input.type === 'radio' && input.checked) Settings.set(key, key === 'tempo' ? Number(input.value) : input.value);
+    });
+    $('#resetSettings').onclick = () => Settings.reset();
+    $('#closeSettings').onclick = () => closeOverlay(dom.settingsOverlay);
+    Settings.subscribe((key) => {
+      syncSettingsForm();
+      if (key === 'tempo' && battle && !app.speedOverride) {
+        battle.tempo = Settings.get('tempo');
+        syncSpeedBadge();
+      }
+    });
+    syncSettingsForm();
+  }
+
+  /* ------------------------------------------------------------------ keyboard */
+  function onKeyDown(e) {
+    if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return;
+    trapFocus(e);
+    const typing = e.target.matches && e.target.matches('input[type="range"], input[type="text"]');
+    const open = topOverlay();
+    if (e.key === 'Escape') {
+      if (open && open !== dom.resultOverlay) { e.preventDefault(); closeOverlay(open); }
+      return;
+    }
+    if (typing) return;
+    const key = e.key.toLowerCase();
+    if (key === 'm') { Settings.set('muted', !Settings.get('muted')); return; }
+    if (key === 's' && !open) { syncSettingsForm(); openOverlay(dom.settingsOverlay); return; }
+    if ((e.key === '?' || key === 'h') && !open) { openOverlay(dom.helpOverlay); return; }
+    if (open) return;
+
+    if (dom.selectScreen.classList.contains('active')) {
+      if (e.key === 'Enter' && !e.target.closest('button')) { e.preventDefault(); $('#startBtn').click(); }
+      return;
+    }
+    if (!battle || battle.busy || battle.state.ended) return;
+    const stun = $('#stunSkip');
+    if (stun && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); stun.click(); return; }
+    if (/^[1-5]$/.test(e.key)) {
+      const btn = dom.cmdGrid.querySelector(`.cmd[data-key="${e.key}"]`);
+      if (btn && !btn.disabled) { e.preventDefault(); btn.click(); }
+      else if (btn) Audio.sfx('ui-error');
+    }
+  }
+
   /* ================================================================== wiring */
-  $$('.mode').forEach((b) => { b.onclick = () => setMode(b.dataset.mode); });
+  wireSelectScreen();
+  wireSettings();
   $('#startBtn').onclick = startBattle;
   $('#rematchBtn').onclick = startBattle;
   $('#backBtn').onclick = backSelect;
   $('#btnReset').onclick = backSelect;
-  $('#btnRef').onclick = () => dom.refOverlay.classList.add('show');
-  $('#closeRef').onclick = () => dom.refOverlay.classList.remove('show');
-  dom.refOverlay.addEventListener('click', (e) => { if (e.target === dom.refOverlay) dom.refOverlay.classList.remove('show'); });
+  $('#btnRef').onclick = () => openOverlay(dom.refOverlay);
+  $('#closeRef').onclick = () => closeOverlay(dom.refOverlay);
+  $('#btnSettings').onclick = () => { syncSettingsForm(); openOverlay(dom.settingsOverlay); };
+  $('#btnHelp').onclick = () => openOverlay(dom.helpOverlay);
+  $('#closeHelp').onclick = () => closeOverlay(dom.helpOverlay);
+  [dom.refOverlay, dom.settingsOverlay, dom.helpOverlay].forEach((el) => {
+    el.addEventListener('click', (e) => { if (e.target === el) closeOverlay(el); });
+  });
+  document.addEventListener('keydown', onKeyDown);
 
   /* ------------------------------------------------------------------ audio wiring */
   Audio.init(Settings);
@@ -765,16 +1056,16 @@
   document.addEventListener('click', (e) => {
     const btn = e.target.closest('button');
     if (!btn || btn.disabled) return;
-    if (btn.matches('.char-card, .palette, .mode')) Audio.sfx('ui-select');
+    if (btn.matches('.char-card, .palette, .mode, [data-random]')) Audio.sfx('ui-select');
     else if (btn.matches('#startBtn, #rematchBtn')) Audio.sfx('ui-confirm');
-    else if (btn.matches('#backBtn, #btnReset, #closeRef')) Audio.sfx('ui-back');
+    else if (btn.matches('#backBtn, #btnReset, #closeRef, #closeHelp, #closeSettings')) Audio.sfx('ui-back');
     else if (btn.matches('#btnMute')) Audio.sfx('ui-toggle');
     else Audio.sfx('ui-click');
   }, true);
   let lastHover = 0;
   document.addEventListener('pointerover', (e) => {
     if (e.pointerType !== 'mouse') return;
-    const el = e.target.closest('.char-card, .cmd:not(:disabled), .mode, .cta, .ghost, .palette');
+    const el = e.target.closest('.char-card, .cmd:not(:disabled), .mode, .cta, .ghost, .palette, .mini');
     if (!el || el.contains(e.relatedTarget)) return;
     const now = performance.now();
     if (now - lastHover < 70) return;
@@ -794,10 +1085,14 @@
   syncMuteButton();
   applyVisualSettings();
 
+  setMode(app.mode);
   renderAllSelect();
+  setGameState('select');
+  if (params.get('autostart') === '1') startBattle();
 
   /** Read-only hooks for QA tooling and automated smoke tests. */
   BB.Game = Object.freeze({
     get state() { return battle ? battle.state : null; },
+    get mode() { return app.mode; },
   });
 })();
