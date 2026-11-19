@@ -27,7 +27,7 @@
           <div class="round-box"><div id="roundLabel" class="round">ROUND 1</div><div id="phaseLabel" class="turn">COMMAND</div></div>
           <div class="hud-side right"><div id="p2HudName" class="fighter-name"></div><div class="bars"><div class="bar"><div id="p2Hp" class="fill hpfill"></div><span id="p2HpTxt" class="bar-label"></span></div><div class="bar"><div id="p2Mp" class="fill mpfill"></div><span id="p2MpTxt" class="bar-label"></span></div></div></div>
         </div>
-        <div id="stage" class="stage"><div class="moon"></div><div class="city"></div><div class="floor"></div><div class="versus">VS</div><div id="fighter1" class="fighter left"></div><div id="fighter2" class="fighter right"></div><div id="sequenceLayer" class="sequence-layer" hidden><svg viewBox="0 0 1000 520" preserveAspectRatio="none" aria-hidden="true"><defs><filter id="g"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><g id="sequenceArt"></g></svg><div id="frameCallout" class="frame-callout"></div></div></div>
+        <div id="stage" class="stage"><div class="moon"></div><div class="city"></div><div class="floor"></div><div class="versus">VS</div><div class="danger-vignette left" aria-hidden="true"></div><div class="danger-vignette right" aria-hidden="true"></div><div id="fighter1" class="fighter left"></div><div id="fighter2" class="fighter right"></div><div id="sequenceLayer" class="sequence-layer" hidden><svg viewBox="0 0 1000 520" preserveAspectRatio="none" aria-hidden="true"><defs><filter id="g"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><g id="sequenceArt"></g></svg><div id="frameCallout" class="frame-callout"></div></div></div>
         <div class="battle-bottom">
           <div class="commands"><div class="command-head"><div><div id="commandTitle" class="command-title">1P 選擇行動</div><div id="commandSub" class="command-sub">選好後立即鎖定本回合行動</div></div><div id="waiting" class="waiting">等待 2P 選擇…</div></div><div id="cmdGrid" class="cmd-grid"></div></div>
           <div id="battleLog" class="log"><h3>BATTLE LOG</h3></div>
@@ -43,6 +43,8 @@
 <script src="js/core/engine.js"></script>
 <script src="js/render/sprites.js"></script>
 <script src="js/audio/audio.js"></script>
+<script src="js/fx/particles.js"></script>
+<script src="js/fx/touch.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>

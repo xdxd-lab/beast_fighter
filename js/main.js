@@ -176,6 +176,24 @@
   }
 
   /* ================================================================== stage FX */
+  const particles = BB.Particles.create(dom.stage, { anchor: (side) => fighterAnchor(side) });
+  const touchFeedback = BB.TouchFeedback.create();
+
+  const GUARD_BARRIER = '<div class="guard-barrier" aria-hidden="true"><svg viewBox="0 0 100 120"><path d="M50 4 L94 22 L90 70 Q80 100 50 116 Q20 100 10 70 L6 22Z" fill="rgba(150,225,255,.16)" stroke="rgba(205,240,255,.85)" stroke-width="4" stroke-linejoin="round"/><path d="M50 18 L80 30 L77 68 Q70 90 50 102 Q30 90 23 68 L20 30Z" fill="none" stroke="rgba(205,240,255,.35)" stroke-width="2"/></svg></div>';
+
+  /** Applies quality / reduced-motion settings to CSS hooks and FX subsystems. */
+  function applyVisualSettings() {
+    const reduced = Settings.prefersReducedMotion();
+    particles.setQuality(Settings.get('quality'));
+    particles.setReducedMotion(reduced);
+    touchFeedback.setReducedMotion(reduced);
+    document.documentElement.dataset.motion = reduced ? 'reduced' : 'full';
+  }
+  Settings.subscribe((key) => { if (key === 'quality' || key === 'reducedMotion') applyVisualSettings(); });
+  if (window.matchMedia) {
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    if (mq.addEventListener) mq.addEventListener('change', applyVisualSettings);
+  }
   const POSE_CLASSES = ['pose-idle', 'pose-ready', 'pose-charge', 'pose-release', 'pose-strike', 'pose-recover', 'pose-hit', 'pose-guard', 'pose-ko', 'pose-victory'];
   const FRAME_CLASSES = ['frame-1', 'frame-2', 'frame-3', 'frame-4', 'frame-5'];
   const TRANSIENT_FX = '.fx,.stage-banner,.afterimage,.fx-flash,.speed-sweep,.impact-burst,.combo-tag,.cinematic-cutin';
@@ -220,8 +238,21 @@
     setTimeout(() => el.classList.remove(cls), duration);
   }
 
-  function shakeStage() {
-    restartClass(dom.stage, 'shake', 240);
+  const reducedMotion = () => Settings.prefersReducedMotion();
+  const highQuality = () => particles.quality === 'high';
+
+  function shakeStage(heavy = false) {
+    if (reducedMotion()) return;
+    restartClass(dom.stage, heavy ? 'shake-heavy' : 'shake', heavy ? 340 : 240);
+  }
+
+  /** Fighter centre in stage units (1000×520), measured from the live layout. */
+  function fighterAnchor(side) {
+    const svg = dom.fighters[side].querySelector('svg');
+    const s = dom.stage.getBoundingClientRect();
+    if (!svg || !s.width) return { x: side === 0 ? 270 : 730, y: 300 };
+    const r = svg.getBoundingClientRect();
+    return { x: ((r.left + r.width / 2 - s.left) / s.width) * 1000, y: ((r.top + r.height * 0.55 - s.top) / s.height) * 520 };
   }
 
   function announceRound(n) {
@@ -255,6 +286,7 @@
   }
 
   function cinematicStage(side, duration = 640, ko = false) {
+    if (reducedMotion()) return;
     dom.stage.classList.remove('zoom-left', 'zoom-right', 'ko-freeze');
     void dom.stage.offsetWidth;
     dom.stage.classList.add(ko ? 'ko-freeze' : side === 0 ? 'zoom-left' : 'zoom-right');
@@ -298,6 +330,7 @@
   }
 
   function spawnAfterimage(side, dx, dy = 0) {
+    if (!highQuality() || reducedMotion()) return;
     const ghost = dom.fighters[side].cloneNode(true);
     ghost.id = '';
     ghost.classList.add('afterimage');
@@ -380,6 +413,11 @@
     const accent = fxColorForSkill(s);
     const fx = s.fx || '';
     const support = Engine.isSupport(s);
+    const projectile = /ember|fireball|water|note|bass|electric|wind/.test(fx);
+    const from = fighterAnchor(side);
+    const to = fighterAnchor(1 - side);
+    const heavy = /meteor|shockwave|hammerquake|hammer|airhammer|fireball/.test(fx) || s.type === 'stun';
+    let auraShown = false;
     let lastStep = -1;
     let flashed = false;
     let hitTriggered = false;
@@ -408,6 +446,11 @@
       }
       setPose(side, s.type === 'guard' && frameIndex >= 3 ? 'guard' : ACTION_POSES[frameIndex]);
       art.innerHTML = effectFrameArt(side, s, t, hit);
+      if (projectile && t > 0.1 && t < 0.7) particles.trail(fx, from.x + (to.x - from.x) * (t / 0.7), from.y - 10);
+      if (support && !auraShown && t >= 0.5) {
+        auraShown = true;
+        particles.aura(fx, side);
+      }
       if (!flashed && step >= 6) {
         flashed = true;
         spawnStageFlash(accent, side === 0 ? '24% 58%' : '76% 58%');
@@ -418,9 +461,11 @@
         animateTargetMotion(1 - side, side);
         spawnImpactBurst(1 - side, accent, s.type === 'stun' ? 'BREAK' : '');
         Audio.skill(s, 'impact', { pan: pan(1 - side), crit: !!(outcome && outcome.crit) });
-        spawnStageFlash(accent, side === 0 ? '76% 48%' : '24% 48%');
-        shakeStage();
-        control.hold(28);
+        const crit = !!(outcome && outcome.crit);
+        particles.impact(fx, 1 - side, { crit, heavy });
+        spawnStageFlash(crit ? 'rgba(255,244,210,.62)' : accent, side === 0 ? '76% 48%' : '24% 48%');
+        shakeStage(crit || heavy);
+        control.hold(crit ? 110 : heavy ? 70 : 40); // hit-stop sells the impact
         session.later(() => { if (!session.state.ended) setPose(1 - side, 'idle'); }, 240);
       }
     });
@@ -457,6 +502,8 @@
     clearFighterVisualState();
     battle = new BattleSession(Engine.createBattle({ characters: [c1, c2], palettes: app.palettes.slice() }));
     Audio.music('battle');
+    particles.clear();
+    particles.setAmbient(true);
     dom.selectScreen.classList.remove('active');
     dom.battleScreen.classList.add('active');
     dom.resultOverlay.classList.remove('show');
@@ -470,7 +517,7 @@
     fighters.forEach((f, i) => {
       const el = dom.fighters[i];
       el.dataset.char = f.character.id;
-      el.innerHTML = `${fighterSVG(f.character, f.paletteIndex)}<div class="expression"><i></i><i></i><b></b></div><div class="pose-icon"></div><div class="nameplate">${f.character.name}・${f.character.job}</div>`;
+      el.innerHTML = `<div class="shield-bubble" aria-hidden="true"></div>${fighterSVG(f.character, f.paletteIndex)}${GUARD_BARRIER}<div class="expression"><i></i><i></i><b></b></div><div class="pose-icon"></div><div class="nameplate">${f.character.name}・${f.character.job}</div>`;
       setPose(i, 'idle');
     });
     dom.hud[0].name.textContent = `1P ${fighters[0].character.name} / ${fighters[0].character.job}`;
@@ -487,7 +534,12 @@
       h.mp.style.transform = `scaleX(${Math.max(0, f.mp / f.maxMp)})`;
       h.hpText.textContent = `HP ${Math.max(0, f.hp)} / ${f.maxHp}${f.shield ? ` +${f.shield}盾` : ''}`;
       h.mpText.textContent = `MP ${f.mp} / ${f.maxMp}`;
-      dom.fighters[i].classList.toggle('low-hp', ratio > 0 && ratio < 0.3);
+      const el = dom.fighters[i];
+      el.classList.toggle('low-hp', ratio > 0 && ratio < 0.3);
+      el.classList.toggle('has-shield', f.shield > 0);
+      el.style.setProperty('--shield', Math.min(1, f.shield / 50).toFixed(2));
+      el.classList.toggle('guarding', f.guard && !battle.state.ended);
+      dom.stage.classList.toggle(i === 0 ? 'danger-left' : 'danger-right', ratio > 0 && ratio < 0.3);
     });
     dom.roundLabel.textContent = `ROUND ${battle.state.round}`;
   }
@@ -650,10 +702,13 @@
     cinematicStage(winner, 720, true);
     spawnStageFlash('rgba(255,108,112,.42)', '50% 48%');
     spawnImpactBurst(loser, 'rgba(255,108,112,.5)', 'K.O.');
+    particles.ko(loser);
+    dom.fighters.forEach((el) => el.classList.remove('guarding', 'has-shield'));
+    battle.later(() => particles.confetti(winner), 900);
     stageBanner('K.O.', '', true);
     Audio.sfx('ko');
     battle.later(() => Audio.music('victory'), 900);
-    shakeStage();
+    shakeStage(true);
     battle.later(() => showResult(winner), 1220);
     return true;
   }
@@ -684,6 +739,8 @@
     dom.selectScreen.classList.add('active');
     dom.resultOverlay.classList.remove('show');
     battle = null;
+    particles.setAmbient(false);
+    particles.clear();
     Audio.music('select');
     renderAllSelect();
   }
@@ -735,6 +792,7 @@
   muteBtn.onclick = () => Settings.set('muted', !Settings.get('muted'));
   Settings.subscribe((key) => { if (key === 'muted') syncMuteButton(); });
   syncMuteButton();
+  applyVisualSettings();
 
   renderAllSelect();
 
