@@ -154,7 +154,7 @@
       if (f.weaken > 0) f.weaken--;
       if (f.slow > 0) f.slow--;
     });
-    if (!checkWinner(state)) state.round++;
+    if (checkWinner(state) === null) state.round++;
   }
 
   /**
