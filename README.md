@@ -36,8 +36,8 @@ Turn-based mind games, arcade-fighter presentation — runs in any modern browse
 | --- | --- |
 | 玩法 | 六名角色、各兩套異色造型；1P vs CPU、1P vs 2P 雙人同機、CPU 觀戰三種模式 |
 | 演出 | 每個動作 5 個姿勢 × 32 格補間、必殺技全螢幕 cut-in、命中停頓（hit-stop）、依招式輕重調整震動 |
-| 特效 | Canvas 粒子系統（加色混合與半透明光暈）、15 種技能各自的命中特效、半透明護盾泡泡、六角防禦結界、低血量暈影、勝利彩帶、場景漂浮微粒 |
-| 音訊 | 全部以 Web Audio 即時合成：介面音、15 種技能施放／命中音、選角與戰鬥 BGM、勝利音樂；有混音匯流排、殘響、壓縮與限幅 |
+| 特效 | Canvas 粒子系統（加色混合與半透明光暈）、依技能屬性區分的命中特效（16 種技能效果、8 種元素色系）、半透明護盾泡泡、六角防禦結界、低血量暈影、勝利彩帶、場景漂浮微粒 |
+| 音訊 | 全部以 Web Audio 即時合成：介面音、16 種技能效果各自的施放音、依屬性疊加的命中音、選角與戰鬥 BGM、勝利音樂；有混音匯流排、殘響、壓縮與限幅 |
 | 介面 | 延遲扣血 HP 條、護盾條與狀態標籤、附快捷鍵與 MP 不足提示的指令卡、能力值條、技能預覽、戰果統計 |
 | 無障礙 | 全程可用鍵盤操作、對話框焦點管理、`aria-live` 戰鬥紀錄、遵循「減少動態效果」系統設定 |
 | 觸控 | 觸控漣漪與多點編號回饋（沿用 MultiTouchKit `mtk-viewer` 的視覺風格），手機版面最窄支援 390 px |
@@ -76,11 +76,11 @@ python3 -m http.server 8000   # 然後開啟 http://localhost:8000
 | 動作 | 滑鼠／觸控 | 鍵盤 |
 | --- | --- | --- |
 | 選角 | 點選角色卡 | <kbd>Tab</kbd> 移到角色區，方向鍵切換 |
-| 開始對戰／再戰 | 點 **FIGHT!**／**REMATCH** | <kbd>Enter</kbd> |
+| 開始對戰／再戰 | 點 **FIGHT!**／**REMATCH** | <kbd>Enter</kbd>（焦點不在其他按鈕上時） |
 | 選擇指令 | 點指令卡 | <kbd>1</kbd>–<kbd>5</kbd> |
-| 失衡時繼續 | 點「失衡中」 | <kbd>Enter</kbd> |
+| 失衡時繼續 | 點「失衡中」 | <kbd>Enter</kbd>／<kbd>Space</kbd> |
 | 靜音 | 🔊 | <kbd>M</kbd> |
-| 設定／說明 | ⚙／? | <kbd>S</kbd>／<kbd>?</kbd> |
+| 設定／說明 | ⚙／? | <kbd>S</kbd>／<kbd>?</kbd>（或 <kbd>H</kbd>） |
 | 關閉對話框 | 點背景或按鈕 | <kbd>Esc</kbd> |
 
 雙人同機時，1P 鎖定指令後畫面會切換給 2P；2P 選擇期間 1P 請先不要偷看。
@@ -187,7 +187,7 @@ GitHub Actions（`.github/workflows/ci.yml`）在每次 push 到 `main` 與每�
 - 特效 SVG 與濾鏡改成常駐節點，不再每格重建。
 - 姿勢 class 只在改變時才更新。
 - HP 與 MP 條改用 `transform` 動畫。
-- 移除全舞台的 `mix-blend-mode`、`backdrop-filter` 與多重 `drop-shadow`。
+- 移除舞台容器層級的 `mix-blend-mode`、場內元素的 `backdrop-filter` 與角色的雙重 `drop-shadow`；其餘混色與模糊在「省電」品質下全部關閉。
 - 粒子使用物件池與預先繪製的光暈貼圖，閒置或分頁隱藏時自動停止。
 - 戰鬥紀錄最多保留 80 筆。
 

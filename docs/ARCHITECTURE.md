@@ -72,8 +72,8 @@ resolveRound()
 
 - **舞台**：DOM（角色 SVG、橫幅、cut-in）、一層常駐的特效 SVG（每步只替換 `<g>` 內容），加上一層 Canvas 粒子。
 - **合成成本**：舞台宣告 `contain: layout paint` 與 `isolation: isolate`，角色只提升 `transform`；HP／MP 條用 `scaleX`；畫面內的元素不使用 `backdrop-filter`。
-- **品質分級**：`html[data-quality]` 為 `high` 或 `low`。`low` 會關閉混色、背景模糊、殘影與掃描線，並縮小粒子上限。設定為「自動」時，粒子系統偵測到平均每格超過約 24 ms，就會自動切到 `low`。
-- **減少動態效果**：`html[data-motion="reduced"]` 會停用畫面震動、鏡頭推近、閃光與待機循環動畫，並減少粒子數量。
+- **品質分級**：`html[data-quality]` 為 `high` 或 `low`。`low` 由 CSS 關閉混色、背景模糊與掃描線，由 JS 略過殘影並縮小粒子上限。設定為「自動」時，粒子系統偵測到平均每格超過約 24 ms，就會自動切到 `low`。
+- **減少動態效果**：`html[data-motion="reduced"]` 由 CSS 停用閃光與待機循環動畫；畫面震動、鏡頭推近與殘影則在 JS 端略過，粒子數量也會減少。
 
 ## 測試策略
 
