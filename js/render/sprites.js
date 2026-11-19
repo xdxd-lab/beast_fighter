@@ -1,0 +1,83 @@
+/**
+ * Beast Brawl — SVG sprite builders.
+ *
+ * fighterSVG()      hand-drawn plush-style fighters (two palettes each), drawn at 220×220.
+ * effectFrameArt()  procedural skill effect for a normalised time t ∈ [0, 1] on a 1000×520
+ *                   stage-space canvas; effectFrameSVG() wraps it in a standalone <svg>.
+ *
+ * All art is original vector work generated as strings, so the game ships with zero image
+ * downloads. Exposed as window.BeastBrawl.Sprites.
+ */
+(function (root) {
+  'use strict';
+
+  const OUTLINE = '#121522';
+  const EYE = '#11131a';
+  const HIGHLIGHT = 'rgba(255,255,255,.55)';
+  const COMMON_STROKE = `stroke="${OUTLINE}" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"`;
+
+  /* eslint-disable max-len -- vector art data */
+  const BODIES = {
+    bear: ({ a, b, d, common, eye, hi, outline }) => `<ellipse cx="110" cy="202" rx="73" ry="10" fill="rgba(0,0,0,.19)"/><ellipse cx="110" cy="118" rx="69" ry="83" fill="${a}" ${common}/><ellipse cx="72" cy="57" rx="16" ry="19" fill="${a}" ${common}/><ellipse cx="148" cy="57" rx="16" ry="19" fill="${a}" ${common}/><ellipse cx="110" cy="124" rx="49" ry="60" fill="${b}" opacity=".23"/><ellipse cx="84" cy="93" rx="7" ry="10" fill="${eye}"/><ellipse cx="136" cy="93" rx="7" ry="10" fill="${eye}"/><circle cx="86" cy="90" r="2.4" fill="#fff" opacity=".85"/><circle cx="138" cy="90" r="2.4" fill="#fff" opacity=".85"/><path d="M105 109 q5-5 10 0 q-5 8-10 0" fill="${eye}"/><path d="M110 115 q0 11-9 13 M110 115 q0 11 9 13" fill="none" stroke="${eye}" stroke-width="4" stroke-linecap="round"/><path d="M76 119 q-8 8-10 21 M144 119 q8 8 10 21" fill="none" stroke="#eaa0a7" stroke-width="4" stroke-linecap="round" opacity=".72"/><ellipse cx="53" cy="151" rx="15" ry="33" fill="${a}" ${common} transform="rotate(16 53 151)"/><ellipse cx="167" cy="151" rx="15" ry="33" fill="${a}" ${common} transform="rotate(-16 167 151)"/><path d="M87 154 Q110 142 133 154 L137 188 Q110 201 83 188Z" fill="${d}" opacity=".92" ${common}/><path d="M101 160 l9-16 9 16-9 10z" fill="#ffb54b" stroke="#7f2d22" stroke-width="4"/><path d="M110 145 q-8-10 1-19 q9 9 1 17 q13-6 15 5 q-8 7-17 3" fill="#ff7040" stroke="#7f2d22" stroke-width="4"/><ellipse cx="98" cy="52" rx="11" ry="6" fill="${hi}" opacity=".42"/>`,
+    elephant: ({ a, b, d, common, eye, hi, outline }) => `<ellipse cx="110" cy="202" rx="76" ry="10" fill="rgba(0,0,0,.18)"/><ellipse cx="110" cy="138" rx="60" ry="63" fill="${a}" ${common}/><ellipse cx="62" cy="95" rx="39" ry="46" fill="${b}" ${common} transform="rotate(10 62 95)"/><ellipse cx="158" cy="95" rx="39" ry="46" fill="${b}" ${common} transform="rotate(-10 158 95)"/><ellipse cx="110" cy="92" rx="55" ry="49" fill="${a}" ${common}/><ellipse cx="88" cy="84" rx="6.5" ry="8" fill="${eye}"/><ellipse cx="132" cy="84" rx="6.5" ry="8" fill="${eye}"/><circle cx="90" cy="81" r="2" fill="#fff"/><circle cx="134" cy="81" r="2" fill="#fff"/><path d="M108 102 C101 126 105 156 122 166 C134 173 144 164 141 153" fill="none" stroke="${outline}" stroke-width="28" stroke-linecap="round"/><path d="M108 102 C101 126 105 156 122 166 C134 173 144 164 141 153" fill="none" stroke="${a}" stroke-width="19" stroke-linecap="round"/><path d="M116 164 q12 9 22-2" fill="none" stroke="${b}" stroke-width="5" stroke-linecap="round"/><ellipse cx="73" cy="165" rx="25" ry="32" fill="${a}" ${common}/><ellipse cx="147" cy="165" rx="25" ry="32" fill="${a}" ${common}/><ellipse cx="77" cy="194" rx="24" ry="10" fill="${b}" opacity=".72"/><ellipse cx="143" cy="194" rx="24" ry="10" fill="${b}" opacity=".72"/><path d="M76 140 Q110 127 144 140 L139 158 Q110 166 81 158Z" fill="${d}" opacity=".88" ${common}/><circle cx="101" cy="54" r="10" fill="${hi}" opacity=".40"/><path d="M64 87 q-9 10-7 23 M156 87 q9 10 7 23" fill="none" stroke="rgba(255,255,255,.27)" stroke-width="6" stroke-linecap="round"/>`,
+    panda: ({ a, b, d, common, eye, hi, outline }) => `<ellipse cx="111" cy="197" rx="82" ry="10" fill="rgba(0,0,0,.19)"/><ellipse cx="128" cy="150" rx="67" ry="42" fill="${a}" ${common} transform="rotate(-5 128 150)"/><ellipse cx="165" cy="151" rx="29" ry="35" fill="${b}" ${common} transform="rotate(-16 165 151)"/><circle cx="68" cy="72" r="22" fill="${b}" ${common}/><circle cx="146" cy="72" r="22" fill="${b}" ${common}/><ellipse cx="107" cy="102" rx="61" ry="51" fill="${a}" ${common}/><ellipse cx="81" cy="97" rx="20" ry="27" fill="${b}" transform="rotate(17 81 97)"/><ellipse cx="133" cy="97" rx="20" ry="27" fill="${b}" transform="rotate(-17 133 97)"/><circle cx="82" cy="97" r="10" fill="#f9f8f4"/><circle cx="132" cy="97" r="10" fill="#f9f8f4"/><circle cx="83" cy="98" r="5" fill="${eye}"/><circle cx="131" cy="98" r="5" fill="${eye}"/><circle cx="85" cy="95" r="1.7" fill="#fff"/><circle cx="133" cy="95" r="1.7" fill="#fff"/><ellipse cx="107" cy="117" rx="9" ry="6" fill="${b}"/><path d="M98 127 q9 7 18 0" fill="none" stroke="${eye}" stroke-width="4" stroke-linecap="round"/><ellipse cx="70" cy="135" rx="31" ry="18" fill="${b}" ${common} transform="rotate(9 70 135)"/><ellipse cx="143" cy="135" rx="31" ry="18" fill="${b}" ${common} transform="rotate(-8 143 135)"/><path d="M153 125 q28-22 39-6 q-10 12-32 17" fill="#77bf69" ${common}/><path d="M180 114 q8 4 10 13" fill="none" stroke="#355f31" stroke-width="5"/><path d="M121 141 q20 5 34 19" fill="none" stroke="${d}" stroke-width="7" stroke-linecap="round" opacity=".75"/><circle cx="99" cy="62" r="9" fill="${hi}" opacity=".40"/>`,
+    hummingbird: ({ a, b, d, common, eye, hi, outline }) => `<ellipse cx="110" cy="199" rx="61" ry="10" fill="rgba(0,0,0,.18)"/><path d="M79 113 Q35 73 30 119 Q51 145 86 136Z" fill="${b}" ${common}/><path d="M136 112 Q183 69 190 116 Q171 145 136 137Z" fill="${b}" ${common}/><ellipse cx="111" cy="111" rx="48" ry="53" fill="${a}" ${common}/><ellipse cx="111" cy="126" rx="30" ry="30" fill="${b}"/><circle cx="99" cy="92" r="6" fill="${eye}"/><circle cx="129" cy="92" r="6" fill="${eye}"/><path d="M139 102 L204 91 L144 116Z" fill="#f1cf7a" ${common}/><path d="M99 110 q12 8 24 0" fill="none" ${common}/><path d="M86 147 Q111 132 139 148 L136 185 Q111 196 87 185Z" fill="${d}" ${common}/><path d="M88 185 l-18 13 M132 185 l18 13" stroke="#eac46c" stroke-width="7" stroke-linecap="round"/><g transform="translate(54 151) rotate(-18)"><rect x="-5" y="-11" width="74" height="11" rx="6" fill="#6a4930"/><rect x="-14" y="-28" width="33" height="34" rx="7" fill="#c9d0db" ${common}/></g><circle cx="103" cy="74" r="7" fill="${hi}"/>`,
+    orca: ({ a, b, d, common, eye, hi, outline }) => `<ellipse cx="110" cy="199" rx="70" ry="11" fill="rgba(0,0,0,.2)"/><path d="M68 72 Q74 36 111 42 Q143 42 156 72 Q174 82 174 112 Q172 153 111 163 Q51 154 48 112 Q48 84 68 72Z" fill="${a}" ${common}/><path d="M101 43 Q113 16 127 44" fill="${a}" ${common}/><ellipse cx="109" cy="127" rx="42" ry="27" fill="${b}"/><ellipse cx="84" cy="88" rx="15" ry="9" fill="${b}" transform="rotate(-20 84 88)"/><ellipse cx="137" cy="88" rx="15" ry="9" fill="${b}" transform="rotate(20 137 88)"/><circle cx="90" cy="95" r="5.5" fill="${eye}"/><circle cx="132" cy="95" r="5.5" fill="${eye}"/><path d="M99 116 q12 10 24 0" fill="none" ${common}/><path d="M54 119 q-31 2-35 25 q23 8 42-3M164 119 q31 2 35 25 q-23 8-42-3" fill="${a}" ${common}/><path d="M101 163 q10 18 9 35 q-22-11-34-1 q7-21 25-34M119 163 q-10 18-9 35 q22-11 34-1 q-7-21-25-34" fill="${a}" ${common}/><path d="M76 142 Q110 157 146 142 L139 176 Q110 188 81 176Z" fill="${d}" opacity=".92" ${common}/><circle cx="103" cy="62" r="8" fill="${hi}"/><path d="M151 70 q18-14 31 0" fill="none" stroke="${d}" stroke-width="5" stroke-linecap="round"/><circle cx="185" cy="68" r="8" fill="${d}"/>`,
+    jelly: ({ a, b, d, common, eye, hi, outline }) => `<ellipse cx="110" cy="202" rx="62" ry="9" fill="rgba(0,0,0,.15)"/><path d="M48 108 C49 57 75 35 110 35 C145 35 171 57 172 108 C158 123 142 129 110 129 C78 129 62 123 48 108Z" fill="${a}" ${common}/><path d="M61 99 C67 62 86 50 110 50 C134 50 153 62 159 99" fill="#fff" opacity=".30"/><path d="M48 108 q13 15 27 2 q13 18 28 1 q14 18 29 0 q14 17 28-1 q10 10 12-2" fill="${a}" ${common}/><circle cx="86" cy="88" r="13" fill="#fff" ${common}/><circle cx="134" cy="88" r="13" fill="#fff" ${common}/><circle cx="86" cy="90" r="6" fill="${eye}"/><circle cx="134" cy="90" r="6" fill="${eye}"/><circle cx="89" cy="86" r="2" fill="#fff"/><circle cx="137" cy="86" r="2" fill="#fff"/><path d="M101 108 q9 8 18 0" fill="none" stroke="${eye}" stroke-width="4" stroke-linecap="round"/><path d="M80 126 C70 147 64 169 70 194 M96 128 C88 153 90 177 88 199 M110 130 C109 155 112 177 110 201 M124 128 C132 153 130 177 132 199 M140 126 C150 147 156 169 150 194" fill="none" stroke="${b}" stroke-width="11" stroke-linecap="round"/><path d="M110 47 l8 15 17 3-12 12 3 17-16-8-16 8 3-17-12-12 17-3z" fill="${d}" opacity=".84" stroke="${outline}" stroke-width="4" stroke-linejoin="round"/><path d="M96 137 Q110 145 124 137 L122 161 Q110 168 98 161Z" fill="${d}" opacity=".82" ${common}/><path d="M110 143 v13 M104 149 h12" stroke="#fff9d6" stroke-width="4" stroke-linecap="round"/><ellipse cx="96" cy="49" rx="13" ry="7" fill="${hi}" opacity=".43"/>`,
+  };
+  /* eslint-enable max-len */
+
+  /**
+   * @param {object} character roster entry
+   * @param {number} [paletteIndex=0]
+   * @returns {string} SVG markup
+   */
+  function fighterSVG(character, paletteIndex = 0) {
+    const [a, b, d] = character.colors[paletteIndex];
+    const body = BODIES[character.id] || BODIES.jelly;
+    const inner = body({ a, b, d, common: COMMON_STROKE, eye: EYE, hi: HIGHLIGHT, outline: OUTLINE });
+    return `<svg viewBox="0 0 220 220" role="img" aria-label="${character.name}・${character.animal}">${inner}</svg>`;
+  }
+
+  /**
+   * Procedural effect artwork for one in-between frame of a five-frame action.
+   * @param {number} side attacker side (0 = left, 1 = right)
+   * @param {object} s skill
+   * @param {number} t normalised progress 0..1
+   * @param {boolean} [hit=true] whether the action connects (misses overshoot)
+   * @returns {string} SVG fragment in a 1000×520 coordinate space
+   */
+  function effectFrameArt(side, s, t, hit = true) {
+    const start=side===0?270:730, end=side===0?730:270, dir=side===0?1:-1;
+    const p=Math.max(0,Math.min(1,t)), frame=1+p*4, x=start+(end-start)*p;
+    const impactX=hit?end:end+dir*105, x2=p>=.72?impactX:x;
+    const glow=(color)=>`<circle cx="${x2}" cy="280" r="${28+frame*4}" fill="${color}" opacity=".12"/><circle cx="${x2}" cy="280" r="${14+frame*2}" fill="${color}" opacity=".82"/>`;
+    let art=''; const kind=s.fx||'slash';
+    if(kind==='ember'||kind==='fireball')art=`<g filter="url(#g)"><path d="M${x2-dir*72} 280 Q${x2-dir*28} ${258-frame*4} ${x2} 280 Q${x2-dir*26} ${302+frame*2} ${x2-dir*72} 280" fill="#ff6b28" opacity=".62"/>${glow('#ffb23f')}<circle cx="${x2+dir*5}" cy="280" r="${kind==='fireball'?22:13}" fill="#fff2a2"/></g>`;
+    else if(kind==='meteor'){const my=88+p*210;art=`<g filter="url(#g)"><path d="M${end-dir*125} ${my-85} L${end-dir*18} ${my}" stroke="#ff742f" stroke-width="34" stroke-linecap="round" opacity=".62"/><circle cx="${end}" cy="${my}" r="27" fill="#ffd45c"/><circle cx="${end}" cy="${my}" r="13" fill="#fff"/></g>`;}
+    else if(kind==='water')art=`<g filter="url(#g)"><path d="M${x2-dir*65} 280 Q${x2-dir*22} 245 ${x2} 280 Q${x2-dir*22} 315 ${x2-dir*65} 280" fill="#49c7ff"/><circle cx="${x2}" cy="280" r="16" fill="#d9f7ff"/></g>`;
+    else if(kind==='wind')art=`<g fill="none" stroke="#ccecff" stroke-width="9" stroke-linecap="round" opacity=".9"><path d="M${x2-dir*80} 255 Q${x2-dir*20} 230 ${x2+dir*35} 260"/><path d="M${x2-dir*72} 285 Q${x2-dir*12} 260 ${x2+dir*48} 288"/><path d="M${x2-dir*58} 315 Q${x2} 295 ${x2+dir*42} 316"/></g>`;
+    else if(kind==='shockwave'||kind==='hammerquake')art=`<g fill="none" stroke="${kind==='shockwave'?'#ffd45c':'#ff8c56'}" stroke-width="10" stroke-linecap="round"><path d="M${start} 382 Q${(start+x2)/2} ${360-frame*5} ${x2} 382"/><path d="M${x2-dir*42} 382 l${dir*20} -28 l${dir*18} 28"/></g>`;
+    else if(kind==='slash'||kind==='shadow')art=`<g fill="none" stroke="${kind==='shadow'?'#b58cff':'#f7fbff'}" stroke-width="12" stroke-linecap="round" opacity=".92"><path d="M${x2-dir*35} 225 L${x2+dir*38} 320"/><path d="M${x2-dir*4} 218 L${x2+dir*62} 295"/></g>`;
+    else if(kind==='leaf')art=`<g fill="#91e36e" stroke="#24472b" stroke-width="3">${[-42,-12,18,48].map((o,i)=>`<ellipse cx="${x2+dir*o}" cy="${260+(i%2)*34}" rx="18" ry="8" transform="rotate(${dir*(25+i*17)} ${x2+dir*o} ${260+(i%2)*34})"/>`).join('')}</g>`;
+    else if(kind==='hammer')art=p<.75?`<g transform="translate(${start+dir*(p*72)} 280) rotate(${dir*(-35+p*64)})"><rect x="-8" y="-60" width="16" height="90" rx="8" fill="#6c4b31"/><rect x="-38" y="-77" width="76" height="35" rx="8" fill="#c7cdd7" stroke="#33394a" stroke-width="5"/></g>`:`<g transform="translate(${end} 310)"><path d="M-55 15 L-20-8 L0 18 L24-10 L58 14" fill="none" stroke="#ffd45c" stroke-width="12"/><circle r="38" fill="#fff0a0" opacity=".28"/></g>`;
+    else if(kind==='airhammer')art=`<g transform="translate(${x2} 275) rotate(${dir*(-38+p*52)})"><path d="M${-dir*78} -5 L${dir*10} -5" stroke="#d9fbff" stroke-width="8" stroke-linecap="round" opacity=".55"/><rect x="-7" y="-55" width="14" height="84" rx="7" fill="#6c4b31"/><rect x="-38" y="-73" width="76" height="34" rx="8" fill="#c7cdd7" stroke="#33394a" stroke-width="5"/></g><g fill="none" stroke="#bff5ff" stroke-width="6" opacity=".65"><path d="M${x2-dir*95} 240 Q${x2-dir*55} 225 ${x2-dir*15} 238"/><path d="M${x2-dir*105} 290 Q${x2-dir*60} 275 ${x2-dir*20} 288"/></g>`;
+    else if(kind==='note'||kind==='bass')art=`<g fill="${kind==='bass'?'#c987ff':'#78e1ff'}" stroke="#fff" stroke-width="3"><circle cx="${x2}" cy="290" r="18"/><path d="M${x2+15} 288 v-70 q35 4 40 24 q-28-8-40 0" fill="none" stroke="${kind==='bass'?'#c987ff':'#78e1ff'}" stroke-width="12"/></g>${kind==='bass'?`<circle cx="${x2}" cy="270" r="${25+frame*12}" fill="none" stroke="#c987ff" stroke-width="6" opacity="${.9-frame*.12}"/>`:''}`;
+    else if(kind==='heal')art=`<g transform="translate(${start} 270)" fill="#79e6a2" stroke="#eaffef" stroke-width="3"><path d="M0 24 C-55-10-50-62 0-37 C50-62 55-10 0 24Z" transform="scale(${.45+frame*.12})"/><circle r="${38+frame*7}" fill="none" stroke="#79e6a2" stroke-width="5" opacity="${1-frame*.14}"/></g>`;
+    else if(kind==='electric')art=`<g transform="translate(${x2} 275)" filter="url(#g)"><path d="M-42 -58 L-9 -16 L-28 -8 L8 22 L-6 28 L42 64 L14 16 L32 7 L-4 -22 L12 -31Z" fill="#c7f8ff" stroke="#6cdcff" stroke-width="6"/><circle r="${20+frame*6}" fill="none" stroke="#8eeaff" stroke-width="5" opacity="${.9-frame*.12}"/></g>`;
+    else if(kind==='bubble')art=`<g transform="translate(${start+dir*34} 275)" fill="#8deaff" stroke="#eaffff" stroke-width="5"><circle r="${45+frame*9}" fill="rgba(112,222,255,.13)"/><circle cx="${-18-frame*3}" cy="${-35-frame*4}" r="${8+frame}" opacity=".65"/><circle cx="${30+frame*2}" cy="${-9-frame*5}" r="${5+frame*.8}" opacity=".5"/><path d="M0 -${34+frame*6} L${28+frame*4} -${12+frame*2} L${22+frame*3} ${30+frame*4} L0 ${44+frame*5} L-${22+frame*3} ${30+frame*4} L-${28+frame*4} -${12+frame*2}Z" fill="rgba(117,164,255,.16)" stroke="#b9d9ff"/></g>`;
+    else if(kind==='guard')art=`<g transform="translate(${start+dir*40} 280)"><path d="M0-75 Q65-55 58 12 Q45 72 0 92 Q-45 72-58 12 Q-65-55 0-75Z" fill="#69d5ff" opacity=".16" stroke="#c8f4ff" stroke-width="8"/></g>`;
+    else art=`<g transform="translate(${start} 270)" fill="#a88cff">${[0,72,144,216,288].map((r,i)=>`<circle cx="${Math.cos(r*Math.PI/180)*(28+frame*7)}" cy="${Math.sin(r*Math.PI/180)*(28+frame*7)}" r="8"/>`).join('')}<circle r="18" fill="#efeaff"/></g>`;
+    const trail = p>.12 && ['ember','fireball','water','note','bass','electric'].includes(kind) ? `<ellipse cx="${start+(x2-start)*.45}" cy="280" rx="${18+22*p}" ry="${6+5*p}" fill="#fff" opacity=".08"/>` : '';
+    return `${trail}${art}`;
+  }
+
+  const EFFECT_DEFS = '<defs><filter id="g"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>';
+
+  /** Standalone SVG for one effect frame (kept for tooling and tests). */
+  function effectFrameSVG(side, s, t, hit = true) {
+    return `<svg viewBox="0 0 1000 520" preserveAspectRatio="none">${EFFECT_DEFS}${effectFrameArt(side, s, t, hit)}</svg>`;
+  }
+
+  (root.BeastBrawl = root.BeastBrawl || {}).Sprites = Object.freeze({ fighterSVG, effectFrameArt, effectFrameSVG, EFFECT_DEFS });
+})(typeof globalThis !== 'undefined' ? globalThis : this);

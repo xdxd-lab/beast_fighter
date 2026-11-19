@@ -1,0 +1,14 @@
+{
+  "name": "beast-brawl",
+  "version": "10.0.0",
+  "private": true,
+  "description": "萌獸鬥技場 Beast Brawl — turn-based arcade fighting game for the browser. Zero runtime dependencies.",
+  "license": "UNLICENSED",
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "test:smoke": "python3 scripts/qa/smoke_test.py"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
