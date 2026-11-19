@@ -10,7 +10,7 @@
   const BB = window.BeastBrawl;
   const { CHARACTERS, UTILITY_SKILLS } = BB.Roster;
   const Engine = BB.Engine;
-  const { fighterSVG, effectFrameSVG } = BB.Sprites;
+  const { fighterSVG, effectFrameArt } = BB.Sprites;
 
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
@@ -31,25 +31,56 @@
       this.busy = false;
       this.koShown = false;
       this.alive = true;
+      this.tempo = 1;           // battle speed multiplier; all authored durations are divided by it
       this.pending = new Map(); // timer id -> reject fn (null for fire-and-forget callbacks)
+      this.frames = new Set();  // rejecters of running rAF timelines
     }
 
-    /** Resolves after `ms`, or rejects with ABORTED if the session is disposed first. */
+    /** Resolves after `ms` (authored at 1x speed), or rejects with ABORTED if disposed first. */
     wait(ms) {
       return new Promise((resolve, reject) => {
-        const id = setTimeout(() => { this.pending.delete(id); resolve(); }, ms);
+        const id = setTimeout(() => { this.pending.delete(id); resolve(); }, ms / this.tempo);
         this.pending.set(id, reject);
       });
     }
 
-    /** Runs `fn` after `ms` unless the session has been disposed. */
+    /** Runs `fn` after `ms` (authored at 1x speed) unless the session has been disposed. */
     later(fn, ms) {
-      const id = setTimeout(() => { this.pending.delete(id); if (this.alive) fn(); }, ms);
+      const id = setTimeout(() => { this.pending.delete(id); if (this.alive) fn(); }, ms / this.tempo);
       this.pending.set(id, null);
+    }
+
+    /**
+     * Calls `onFrame(elapsed, control)` once per display frame until `duration` authored ms
+     * have elapsed. `control.hold(ms)` freezes the clock (hit-stop). If the tab was hidden
+     * (rAF paused), the timeline jumps straight to its end instead of replaying.
+     */
+    timeline(duration, onFrame) {
+      return new Promise((resolve, reject) => {
+        let elapsed = 0;
+        let last = null;
+        let holdUntil = 0;
+        const control = { hold: (ms) => { holdUntil = Math.max(holdUntil, performance.now() + ms / this.tempo); } };
+        const finish = () => { this.frames.delete(reject); resolve(); };
+        const tick = (now) => {
+          if (!this.alive) return;
+          const dt = last === null ? 0 : now - last;
+          last = now;
+          if (dt > 250) elapsed = duration;
+          else if (now >= holdUntil) elapsed = Math.min(duration, elapsed + dt * this.tempo);
+          onFrame(elapsed, control);
+          if (elapsed >= duration) finish();
+          else requestAnimationFrame(tick);
+        };
+        this.frames.add(reject);
+        requestAnimationFrame(tick);
+      });
     }
 
     dispose() {
       this.alive = false;
+      this.frames.forEach((reject) => reject(ABORTED));
+      this.frames.clear();
       this.pending.forEach((reject, id) => { clearTimeout(id); if (reject) reject(ABORTED); });
       this.pending.clear();
     }
@@ -70,6 +101,11 @@
     battleLog: $('#battleLog'),
     resultOverlay: $('#resultOverlay'),
     refOverlay: $('#refOverlay'),
+    sequence: {
+      layer: $('#sequenceLayer'),
+      art: $('#sequenceArt'),
+      callout: $('#frameCallout'),
+    },
     hud: [1, 2].map((p) => ({
       name: $(`#p${p}HudName`),
       hp: $(`#p${p}Hp`),
@@ -137,21 +173,39 @@
   /* ================================================================== stage FX */
   const POSE_CLASSES = ['pose-idle', 'pose-ready', 'pose-charge', 'pose-release', 'pose-strike', 'pose-recover', 'pose-hit', 'pose-guard', 'pose-ko', 'pose-victory'];
   const FRAME_CLASSES = ['frame-1', 'frame-2', 'frame-3', 'frame-4', 'frame-5'];
-  const TRANSIENT_FX = '.sequence-layer,.fx,.stage-banner,.afterimage,.fx-flash,.speed-sweep,.impact-burst,.combo-tag,.cinematic-cutin';
+  const TRANSIENT_FX = '.fx,.stage-banner,.afterimage,.fx-flash,.speed-sweep,.impact-burst,.combo-tag,.cinematic-cutin';
+
+  /** Last pose/frame class applied per side, so unchanged frames cost no style recalculation. */
+  const currentPose = ['', ''];
+  const currentFrame = [-1, -1];
 
   function clearFighterVisualState() {
-    dom.fighters.forEach((el) => {
-      el.classList.remove(...POSE_CLASSES, ...FRAME_CLASSES, 'low-hp', 'attack', 'hit', 'guard', 'ko', 'skill');
+    dom.fighters.forEach((el, side) => {
+      el.classList.remove(...POSE_CLASSES, ...FRAME_CLASSES, 'low-hp');
       el.removeAttribute('data-char');
+      currentPose[side] = '';
+      currentFrame[side] = -1;
     });
     $$(TRANSIENT_FX, dom.stage).forEach((el) => el.remove());
+    dom.sequence.layer.hidden = true;
     dom.stage.classList.remove('shake', 'zoom-left', 'zoom-right', 'ko-freeze');
   }
 
   function setPose(side, pose = 'idle') {
+    if (currentPose[side] === pose) return;
     const el = dom.fighters[side];
-    el.classList.remove(...POSE_CLASSES);
+    if (currentPose[side]) el.classList.remove(`pose-${currentPose[side]}`);
     el.classList.add(`pose-${pose}`);
+    currentPose[side] = pose;
+  }
+
+  /** frameIndex 0..4 or -1 to clear. */
+  function setFrame(side, frameIndex) {
+    if (currentFrame[side] === frameIndex) return;
+    const el = dom.fighters[side];
+    if (currentFrame[side] >= 0) el.classList.remove(FRAME_CLASSES[currentFrame[side]]);
+    if (frameIndex >= 0) el.classList.add(FRAME_CLASSES[frameIndex]);
+    currentFrame[side] = frameIndex;
   }
 
   function restartClass(el, cls, duration) {
@@ -298,18 +352,26 @@
     await session.wait(90);
   }
 
-  /** Plays the 32-step, five-pose action sequence and triggers the impact at t ≈ 0.68. */
+  const ACTION_STEPS = 32;          // in-between frames per action
+  const ACTION_STEP_MS = 28;        // authored duration of one step at 1x speed
+  const ACTION_DURATION = (ACTION_STEPS - 1) * ACTION_STEP_MS + 44;
+  const ACTION_POSES = ['ready', 'charge', 'release', 'strike', 'recover'];
+
+  /**
+   * Plays the five-pose, 32-step action sequence on a requestAnimationFrame timeline and
+   * triggers the impact at t ≈ 0.68. The effect SVG and callout are persistent nodes that
+   * are only updated when the step changes (V9 rebuilt the whole <svg> 32 times per action).
+   */
   async function playFiveFrameAction(side, s, hit = true) {
     const session = battle;
-    const actor = dom.fighters[side];
-    const layer = document.createElement('div');
-    layer.className = 'sequence-layer';
-    dom.stage.appendChild(layer);
-    const poses = ['ready', 'charge', 'release', 'strike', 'recover'];
-    const totalSteps = 32;
+    const { layer, art, callout } = dom.sequence;
     const accent = fxColorForSkill(s);
     const fx = s.fx || '';
+    const support = Engine.isSupport(s);
+    let lastStep = -1;
+    let flashed = false;
     let hitTriggered = false;
+
     animateActorMotion(side, s);
     if (/shadow|leaf|hammer|airhammer|note|bass/.test(fx)) spawnSpeedSweep(side, accent);
     if (/shadow|leaf|airhammer/.test(fx)) {
@@ -318,31 +380,47 @@
       session.later(() => spawnAfterimage(side, dir * 42, -8), 150);
       session.later(() => spawnAfterimage(side, dir * 58, -10), 210);
     }
-    for (let step = 0; step < totalSteps; step++) {
-      const t = step / (totalSteps - 1);
+    layer.hidden = false;
+
+    await session.timeline(ACTION_DURATION, (elapsed, control) => {
+      const step = Math.min(ACTION_STEPS - 1, Math.floor(elapsed / ACTION_STEP_MS));
+      if (step === lastStep) return;
+      lastStep = step;
+      const t = step / (ACTION_STEPS - 1);
       const frameIndex = Math.min(4, Math.floor(t * 5));
-      actor.classList.remove(...FRAME_CLASSES);
-      actor.classList.add(`frame-${frameIndex + 1}`);
-      setPose(side, poses[frameIndex]);
-      layer.innerHTML = `${effectFrameSVG(side, s, t, hit)}<div class="frame-callout">${s.name} · ${frameIndex + 1}/5</div>`;
-      if (step === 6) spawnStageFlash(accent, side === 0 ? '24% 58%' : '76% 58%');
-      if (!hitTriggered && hit && t >= 0.68 && !Engine.isSupport(s)) {
+      if (currentFrame[side] !== frameIndex) {
+        setFrame(side, frameIndex);
+        callout.textContent = `${s.name} · ${frameIndex + 1}/5`;
+        callout.animate(FRAME_FLASH, { duration: 160, easing: 'ease' });
+      }
+      setPose(side, s.type === 'guard' && frameIndex >= 3 ? 'guard' : ACTION_POSES[frameIndex]);
+      art.innerHTML = effectFrameArt(side, s, t, hit);
+      if (!flashed && step >= 6) {
+        flashed = true;
+        spawnStageFlash(accent, side === 0 ? '24% 58%' : '76% 58%');
+      }
+      if (!hitTriggered && hit && t >= 0.68 && !support) {
         hitTriggered = true;
         setPose(1 - side, 'hit');
         animateTargetMotion(1 - side, side);
         spawnImpactBurst(1 - side, accent, s.type === 'stun' ? 'BREAK' : '');
         spawnStageFlash(accent, side === 0 ? '76% 48%' : '24% 48%');
         shakeStage();
-        await session.wait(28);
+        control.hold(28);
         session.later(() => { if (!session.state.ended) setPose(1 - side, 'idle'); }, 240);
       }
-      if (frameIndex >= 3 && s.type === 'guard') setPose(side, 'guard');
-      await session.wait(step === totalSteps - 1 ? 44 : 28);
-    }
-    actor.classList.remove(...FRAME_CLASSES);
-    layer.remove();
+    });
+
+    setFrame(side, -1);
+    layer.hidden = true;
+    art.textContent = '';
     if (!session.state.ended) setPose(side, s.type === 'guard' ? 'guard' : 'idle');
   }
+
+  const FRAME_FLASH = [
+    { opacity: 0.25, transform: 'translateX(-50%) scale(.92)' },
+    { opacity: 1, transform: 'translateX(-50%) scale(1)' },
+  ];
 
   function fxText(side, text, cls = 'damage') {
     spawnTransient(`fx fx-text ${cls}`, (el) => {
@@ -390,8 +468,8 @@
     battle.state.fighters.forEach((f, i) => {
       const h = dom.hud[i];
       const ratio = f.hp / f.maxHp;
-      h.hp.style.width = `${Math.max(0, ratio * 100)}%`;
-      h.mp.style.width = `${Math.max(0, (f.mp / f.maxMp) * 100)}%`;
+      h.hp.style.transform = `scaleX(${Math.max(0, ratio)})`;
+      h.mp.style.transform = `scaleX(${Math.max(0, f.mp / f.maxMp)})`;
       h.hpText.textContent = `HP ${Math.max(0, f.hp)} / ${f.maxHp}${f.shield ? ` +${f.shield}盾` : ''}`;
       h.mpText.textContent = `MP ${f.mp} / ${f.maxMp}`;
       dom.fighters[i].classList.toggle('low-hp', ratio > 0 && ratio < 0.3);
@@ -568,11 +646,15 @@
     dom.resultOverlay.classList.add('show');
   }
 
+  const LOG_LIMIT = 80;
+
   function log(text) {
     const e = document.createElement('div');
     e.className = 'log-entry';
     e.textContent = `R${battle ? battle.state.round : 1}｜${text}`;
     dom.battleLog.appendChild(e);
+    const entries = dom.battleLog.getElementsByClassName('log-entry');
+    if (entries.length > LOG_LIMIT) entries[0].remove();
     dom.battleLog.scrollTop = dom.battleLog.scrollHeight;
   }
 
