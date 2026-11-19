@@ -8,7 +8,7 @@
 </head>
 <body>
 <div class="app">
-  <header class="topbar"><div class="brand">BEAST <b>BRAWL</b> // TURN FIGHTER</div><div class="top-actions"><button id="btnRef" class="ghost">Reference</button><button id="btnReset" class="ghost">重新選角</button></div></header>
+  <header class="topbar"><div class="brand">BEAST <b>BRAWL</b> // TURN FIGHTER</div><div class="top-actions"><button id="btnMute" class="ghost icon" type="button" aria-pressed="false" aria-label="關閉聲音" title="聲音（M）">🔊</button><button id="btnRef" class="ghost">Reference</button><button id="btnReset" class="ghost">重新選角</button></div></header>
   <main>
     <section id="selectScreen" class="screen active">
       <div class="hero"><div class="eyebrow">ARCADE LOOK × TURN-BASED MIND GAME · V9 ULTIMATE OVERHAUL EDITION</div><h1>萌獸<br>鬥技場</h1><p>外觀是 2D 街機格鬥，操作改成每回合選擇行動。雙方各決定一個指令後，依速度與技能優先度結算。先把對手 HP 歸零就獲勝。</p></div>
@@ -38,9 +38,11 @@
 </div>
 <div id="resultOverlay" class="overlay"><div class="modal"><div id="resultKicker" class="eyebrow">BATTLE RESULT</div><h2 id="resultTitle">1P WIN</h2><p id="resultText"></p><div class="modal-actions"><button id="rematchBtn" class="cta">REMATCH</button><button id="backBtn" class="secondary">重新選角</button></div></div></div>
 <div id="refOverlay" class="overlay"><div class="modal ref"><div class="eyebrow">REFERENCE</div><h2 style="font-size:28px">設計參考</h2><p>本原型的格鬥介面只參考「左右對峙、HP 資源條、角色異色、街機式演出」等高層概念。V9 的北極熊與大象依使用者提供的實體布偶照片重新概括輪廓；熊貓只採用「趴睡、扁圓」的廣義概念；水母只採用「圓傘帽＋長觸手＋簡單表情」的廣義概念，所有 SVG 均重新繪製。</p><ul><li>CAPCOM — Street Fighter 6 官方網站：<br><a href="https://www.streetfighter.com/6/" target="_blank" rel="noreferrer">https://www.streetfighter.com/6/</a></li><li>SEGA Retro — Yu Yu Hakusho: Makyou Toitsusen 條目：<br><a href="https://segaretro.org/Yuu_Yuu_Hakusho:_Makyou_Toitsusen" target="_blank" rel="noreferrer">https://segaretro.org/Yuu_Yuu_Hakusho:_Makyou_Toitsusen</a></li></ul><div class="copyright">Prototype v9 — full visual overhaul / cinematic cut-ins / denser in-between motion / advanced impact presentation. Plush references were reinterpreted; copyrighted character references were used only for broad pose and silhouette ideas and were independently redrawn.</div><div class="modal-actions"><button id="closeRef" class="cta">關閉</button></div></div></div>
+<script src="js/core/settings.js"></script>
 <script src="js/data/roster.js"></script>
 <script src="js/core/engine.js"></script>
 <script src="js/render/sprites.js"></script>
+<script src="js/audio/audio.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>

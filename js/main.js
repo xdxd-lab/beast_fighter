@@ -11,6 +11,11 @@
   const { CHARACTERS, UTILITY_SKILLS } = BB.Roster;
   const Engine = BB.Engine;
   const { fighterSVG, effectFrameArt } = BB.Sprites;
+  const Audio = BB.Audio;
+  const Settings = BB.Settings;
+
+  /** Stereo position of each side for spatialised sound. */
+  const pan = (side) => (side === 0 ? -0.45 : 0.45);
 
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
@@ -219,6 +224,12 @@
     restartClass(dom.stage, 'shake', 240);
   }
 
+  function announceRound(n) {
+    stageBanner(`ROUND ${n}`, 'FIGHT!');
+    Audio.sfx('round');
+    if (battle) battle.later(() => Audio.sfx('fight'), 320);
+  }
+
   function stageBanner(main, sub = '', ko = false) {
     const el = document.createElement('div');
     el.className = `stage-banner${ko ? ' ko' : ''}`;
@@ -339,6 +350,7 @@
     const fighter = session.state.fighters[side];
     if (!fighter) return;
     cinematicStage(side, 640, false);
+    Audio.sfx('cutin', { pan: pan(side) });
     spawnStageFlash(fxColorForSkill(s), side === 0 ? '24% 48%' : '76% 48%');
     const el = document.createElement('div');
     el.className = `cinematic-cutin ${side === 1 ? 'right' : ''}`;
@@ -362,7 +374,7 @@
    * triggers the impact at t ≈ 0.68. The effect SVG and callout are persistent nodes that
    * are only updated when the step changes (V9 rebuilt the whole <svg> 32 times per action).
    */
-  async function playFiveFrameAction(side, s, hit = true) {
+  async function playFiveFrameAction(side, s, hit = true, outcome = null) {
     const session = battle;
     const { layer, art, callout } = dom.sequence;
     const accent = fxColorForSkill(s);
@@ -373,6 +385,7 @@
     let hitTriggered = false;
 
     animateActorMotion(side, s);
+    Audio.skill(s, 'cast', { pan: pan(side) });
     if (/shadow|leaf|hammer|airhammer|note|bass/.test(fx)) spawnSpeedSweep(side, accent);
     if (/shadow|leaf|airhammer/.test(fx)) {
       const dir = side === 0 ? 1 : -1;
@@ -404,6 +417,7 @@
         setPose(1 - side, 'hit');
         animateTargetMotion(1 - side, side);
         spawnImpactBurst(1 - side, accent, s.type === 'stun' ? 'BREAK' : '');
+        Audio.skill(s, 'impact', { pan: pan(1 - side), crit: !!(outcome && outcome.crit) });
         spawnStageFlash(accent, side === 0 ? '76% 48%' : '24% 48%');
         shakeStage();
         control.hold(28);
@@ -442,6 +456,7 @@
     if (battle) battle.dispose();
     clearFighterVisualState();
     battle = new BattleSession(Engine.createBattle({ characters: [c1, c2], palettes: app.palettes.slice() }));
+    Audio.music('battle');
     dom.selectScreen.classList.remove('active');
     dom.battleScreen.classList.add('active');
     dom.resultOverlay.classList.remove('show');
@@ -461,7 +476,7 @@
     dom.hud[0].name.textContent = `1P ${fighters[0].character.name} / ${fighters[0].character.job}`;
     dom.hud[1].name.textContent = `${sideLabel(1)} ${fighters[1].character.name} / ${fighters[1].character.job}`;
     updateHUD();
-    stageBanner('ROUND 1', 'FIGHT!');
+    announceRound(1);
   }
 
   function updateHUD() {
@@ -490,7 +505,7 @@
     if (checkEnd()) return;
     setPose(0, 'idle');
     setPose(1, 'idle');
-    if (state.round > 1) stageBanner(`ROUND ${state.round}`, 'FIGHT!');
+    if (state.round > 1) announceRound(state.round);
     setPrompt(0);
     renderCommands(0);
   }
@@ -599,8 +614,9 @@
     }
 
     if (Engine.isSuperSkill(s)) await showCutin(side, s);
-    await playFiveFrameAction(side, s, outcome.hit);
+    await playFiveFrameAction(side, s, outcome.hit, outcome);
     if (!outcome.hit) {
+      Audio.skill(s, 'miss', { pan: pan(1 - side) });
       spawnStageFlash('rgba(255,255,255,.16)', side === 0 ? '76% 48%' : '24% 48%');
       log(`${me.character.name} 的「${s.name}」落空！`);
       fxText(1 - side, 'MISS', 'miss');
@@ -615,6 +631,7 @@
     if (outcome.statuses.includes('stun')) {
       log(`${op.character.name} 失衡！下回合無法行動。`);
       fxText(1 - side, 'STUN', 'crit');
+      Audio.sfx('stun', { pan: pan(1 - side) });
     }
   }
 
@@ -634,6 +651,8 @@
     spawnStageFlash('rgba(255,108,112,.42)', '50% 48%');
     spawnImpactBurst(loser, 'rgba(255,108,112,.5)', 'K.O.');
     stageBanner('K.O.', '', true);
+    Audio.sfx('ko');
+    battle.later(() => Audio.music('victory'), 900);
     shakeStage();
     battle.later(() => showResult(winner), 1220);
     return true;
@@ -665,6 +684,7 @@
     dom.selectScreen.classList.add('active');
     dom.resultOverlay.classList.remove('show');
     battle = null;
+    Audio.music('select');
     renderAllSelect();
   }
 
@@ -677,6 +697,44 @@
   $('#btnRef').onclick = () => dom.refOverlay.classList.add('show');
   $('#closeRef').onclick = () => dom.refOverlay.classList.remove('show');
   dom.refOverlay.addEventListener('click', (e) => { if (e.target === dom.refOverlay) dom.refOverlay.classList.remove('show'); });
+
+  /* ------------------------------------------------------------------ audio wiring */
+  Audio.init(Settings);
+  Audio.music('select');
+  ['pointerdown', 'keydown', 'touchend'].forEach((type) =>
+    document.addEventListener(type, () => Audio.unlock(), { capture: true, passive: true }));
+
+  /** Interface sounds, delegated so every current and future button gets them. */
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('button');
+    if (!btn || btn.disabled) return;
+    if (btn.matches('.char-card, .palette, .mode')) Audio.sfx('ui-select');
+    else if (btn.matches('#startBtn, #rematchBtn')) Audio.sfx('ui-confirm');
+    else if (btn.matches('#backBtn, #btnReset, #closeRef')) Audio.sfx('ui-back');
+    else if (btn.matches('#btnMute')) Audio.sfx('ui-toggle');
+    else Audio.sfx('ui-click');
+  }, true);
+  let lastHover = 0;
+  document.addEventListener('pointerover', (e) => {
+    if (e.pointerType !== 'mouse') return;
+    const el = e.target.closest('.char-card, .cmd:not(:disabled), .mode, .cta, .ghost, .palette');
+    if (!el || el.contains(e.relatedTarget)) return;
+    const now = performance.now();
+    if (now - lastHover < 70) return;
+    lastHover = now;
+    Audio.sfx('ui-hover');
+  });
+
+  const muteBtn = $('#btnMute');
+  function syncMuteButton() {
+    const muted = Settings.get('muted');
+    muteBtn.setAttribute('aria-pressed', String(muted));
+    muteBtn.setAttribute('aria-label', muted ? '開啟聲音' : '關閉聲音');
+    muteBtn.textContent = muted ? '🔇' : '🔊';
+  }
+  muteBtn.onclick = () => Settings.set('muted', !Settings.get('muted'));
+  Settings.subscribe((key) => { if (key === 'muted') syncMuteButton(); });
+  syncMuteButton();
 
   renderAllSelect();
 

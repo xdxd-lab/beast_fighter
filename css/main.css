@@ -2102,3 +2102,10 @@ main {
     padding: 12px;
   }
 }
+
+/* V10: icon button in the top bar (mute) */
+.ghost.icon {
+  min-width: 40px;
+  font-size: 16px;
+  line-height: 1;
+}
