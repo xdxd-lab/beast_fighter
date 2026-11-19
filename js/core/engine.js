@@ -71,7 +71,7 @@
   const PASSIVE_POWER = [
     { id: 'bear', applies: (ctx) => ctx.me.hp / ctx.me.maxHp < 0.5, multiplier: 1.12 },
     { id: 'elephant', applies: (ctx) => ctx.skill.id !== 'basic', multiplier: 1.08 },
-    { id: 'panda', applies: (ctx) => ctx.wentFirst(), multiplier: 1.12 },
+    { id: 'panda', applies: (ctx) => ctx.wentFirst, multiplier: 1.12 },
     { id: 'hummingbird', applies: (ctx) => ctx.me.hp / ctx.me.maxHp < 0.35, multiplier: 1.18 },
   ];
 
@@ -217,7 +217,7 @@
     outcome.crit = state.rng() < (skill.crit || RULES.baseCritChance);
 
     let power = skill.power || 0;
-    const ctx = { me, op, skill, wentFirst: () => rollSpeed(state, me) > rollSpeed(state, op) };
+    const ctx = { me, op, skill, wentFirst: state.order[0] === side };
     for (const passive of PASSIVE_POWER) {
       if (me.character.id === passive.id && passive.applies(ctx)) power *= passive.multiplier;
     }
@@ -269,11 +269,25 @@
   }
 
   /**
+   * A staggered fighter loses this turn: clears the stun and returns the skip command.
+   * Used for both human players (after they acknowledge it) and the CPU.
+   */
+  function takeStunnedTurn(state, side) {
+    state.fighters[side].stun = false;
+    return SKIP_ACTION;
+  }
+
+  /** CPU only refreshes shields / focuses through the random pool when it is worth it. */
+  const CPU_SHIELD_REFRESH_BELOW = 12;
+  const CPU_FOCUS_SLACK = 4;
+
+  /**
    * Heuristic CPU opponent: heals/shields when hurt, focuses when dry, finishes when the
-   * opponent is low, otherwise picks a random affordable command.
+   * opponent is low, otherwise picks a random affordable command. A stunned CPU skips.
    */
   function cpuChooseAction(state, side, utilitySkills) {
     const me = state.fighters[side];
+    if (me.stun) return takeStunnedTurn(state, side);
     const opp = state.fighters[1 - side];
     const rng = state.rng;
     const guard = utilitySkills.find((s) => s.id === 'guard');
@@ -291,7 +305,11 @@
       const finisher = options.filter((s) => OFFENSIVE_TYPES.includes(s.type)).sort((a, b) => (b.power || 0) - (a.power || 0))[0];
       if (finisher) return finisher;
     }
-    const pool = options.filter((s) => s.type !== 'heal' && (s.id !== 'guard' || rng() < 0.35));
+    const pool = options.filter((s) =>
+      s.type !== 'heal' &&
+      (s.type !== 'shield' || me.shield < CPU_SHIELD_REFRESH_BELOW) &&
+      (s.id !== 'focus' || me.mp < me.maxMp - CPU_FOCUS_SLACK) &&
+      (s.id !== 'guard' || rng() < 0.35));
     return pool[Math.floor(rng() * pool.length)] || focus;
   }
 
@@ -319,6 +337,7 @@
     checkWinner,
     commandsFor,
     cpuChooseAction,
+    takeStunnedTurn,
     isSuperSkill,
     isSupport,
   });

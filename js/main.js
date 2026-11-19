@@ -14,7 +14,46 @@
 
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
-  const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  /** Rejection reason used to unwind coroutines of a battle that was abandoned. */
+  const ABORTED = Object.freeze({ aborted: true });
+  const ignoreAbort = (err) => { if (err !== ABORTED) throw err; };
+
+  /**
+   * One battle's lifetime. Every delay and deferred callback of the battle goes through the
+   * session, so leaving or restarting a battle cancels them all: stale coroutines can never
+   * touch the next battle (V9 crashed or double-acted when 重新選角 was used mid-resolve).
+   */
+  class BattleSession {
+    constructor(state) {
+      this.state = state;
+      this.locked = [null, null];
+      this.busy = false;
+      this.koShown = false;
+      this.alive = true;
+      this.pending = new Map(); // timer id -> reject fn (null for fire-and-forget callbacks)
+    }
+
+    /** Resolves after `ms`, or rejects with ABORTED if the session is disposed first. */
+    wait(ms) {
+      return new Promise((resolve, reject) => {
+        const id = setTimeout(() => { this.pending.delete(id); resolve(); }, ms);
+        this.pending.set(id, reject);
+      });
+    }
+
+    /** Runs `fn` after `ms` unless the session has been disposed. */
+    later(fn, ms) {
+      const id = setTimeout(() => { this.pending.delete(id); if (this.alive) fn(); }, ms);
+      this.pending.set(id, null);
+    }
+
+    dispose() {
+      this.alive = false;
+      this.pending.forEach((reject, id) => { clearTimeout(id); if (reject) reject(ABORTED); });
+      this.pending.clear();
+    }
+  }
 
   /* ------------------------------------------------------------------ DOM refs */
   const dom = {
@@ -242,7 +281,8 @@
   }
 
   async function showCutin(side, s) {
-    const fighter = battle && battle.state.fighters[side];
+    const session = battle;
+    const fighter = session.state.fighters[side];
     if (!fighter) return;
     cinematicStage(side, 640, false);
     spawnStageFlash(fxColorForSkill(s), side === 0 ? '24% 48%' : '76% 48%');
@@ -251,15 +291,16 @@
     el.innerHTML = `<div class="cutin-card"><div class="cutin-art">${fighterSVG(fighter.character, fighter.paletteIndex)}</div><div class="cutin-meta"><div class="cutin-ribbon">${cutinRoleLabel(s)}</div><div class="cutin-name">${s.name}</div><div class="cutin-sub">${fighter.character.name}・${fighter.character.job}</div><div class="cutin-desc">${s.desc}</div></div></div>`;
     dom.stage.appendChild(el);
     requestAnimationFrame(() => el.classList.add('show'));
-    await wait(560);
+    await session.wait(560);
     el.classList.remove('show');
     el.classList.add('hide');
     setTimeout(() => el.remove(), 260);
-    await wait(90);
+    await session.wait(90);
   }
 
   /** Plays the 32-step, five-pose action sequence and triggers the impact at t ≈ 0.68. */
   async function playFiveFrameAction(side, s, hit = true) {
+    const session = battle;
     const actor = dom.fighters[side];
     const layer = document.createElement('div');
     layer.className = 'sequence-layer';
@@ -273,9 +314,9 @@
     if (/shadow|leaf|hammer|airhammer|note|bass/.test(fx)) spawnSpeedSweep(side, accent);
     if (/shadow|leaf|airhammer/.test(fx)) {
       const dir = side === 0 ? 1 : -1;
-      setTimeout(() => spawnAfterimage(side, dir * 16, -2), 90);
-      setTimeout(() => spawnAfterimage(side, dir * 42, -8), 150);
-      setTimeout(() => spawnAfterimage(side, dir * 58, -10), 210);
+      session.later(() => spawnAfterimage(side, dir * 16, -2), 90);
+      session.later(() => spawnAfterimage(side, dir * 42, -8), 150);
+      session.later(() => spawnAfterimage(side, dir * 58, -10), 210);
     }
     for (let step = 0; step < totalSteps; step++) {
       const t = step / (totalSteps - 1);
@@ -292,15 +333,15 @@
         spawnImpactBurst(1 - side, accent, s.type === 'stun' ? 'BREAK' : '');
         spawnStageFlash(accent, side === 0 ? '76% 48%' : '24% 48%');
         shakeStage();
-        await wait(28);
-        setTimeout(() => { if (battle && !battle.state.ended) setPose(1 - side, 'idle'); }, 240);
+        await session.wait(28);
+        session.later(() => { if (!session.state.ended) setPose(1 - side, 'idle'); }, 240);
       }
       if (frameIndex >= 3 && s.type === 'guard') setPose(side, 'guard');
-      await wait(step === totalSteps - 1 ? 44 : 28);
+      await session.wait(step === totalSteps - 1 ? 44 : 28);
     }
     actor.classList.remove(...FRAME_CLASSES);
     layer.remove();
-    if (battle && !battle.state.ended) setPose(side, s.type === 'guard' ? 'guard' : 'idle');
+    if (!session.state.ended) setPose(side, s.type === 'guard' ? 'guard' : 'idle');
   }
 
   function fxText(side, text, cls = 'damage') {
@@ -320,13 +361,9 @@
     const c1 = CHARACTERS[app.selection[0]];
     const c2 = CHARACTERS[app.selection[1]];
     if (c1.id === c2.id && app.palettes[0] === app.palettes[1]) app.palettes[1] = 1 - app.palettes[0];
+    if (battle) battle.dispose();
     clearFighterVisualState();
-    battle = {
-      state: Engine.createBattle({ characters: [c1, c2], palettes: app.palettes.slice() }),
-      locked: [null, null],
-      busy: false,
-      koShown: false,
-    };
+    battle = new BattleSession(Engine.createBattle({ characters: [c1, c2], palettes: app.palettes.slice() }));
     dom.selectScreen.classList.remove('active');
     dom.battleScreen.classList.add('active');
     dom.resultOverlay.classList.remove('show');
@@ -393,10 +430,7 @@
     box.innerHTML = '';
     if (f.stun) {
       box.innerHTML = '<button class="cmd" id="stunSkip"><b>失衡中</b><small>本回合無法行動，點擊繼續。</small></button>';
-      $('#stunSkip').onclick = () => {
-        f.stun = false;
-        chooseAction(side, Engine.SKIP_ACTION);
-      };
+      $('#stunSkip').onclick = () => chooseAction(side, Engine.takeStunnedTurn(battle.state, side));
       return;
     }
     Engine.commandsFor(f, UTILITY_SKILLS).forEach((s) => {
@@ -416,32 +450,33 @@
     if (side === 0) {
       if (app.mode === 'cpu') {
         battle.locked[1] = Engine.cpuChooseAction(battle.state, 1, UTILITY_SKILLS);
-        resolveRound();
+        resolveRound().catch(ignoreAbort);
       } else {
         setPrompt(1);
         renderCommands(1);
       }
     } else {
-      resolveRound();
+      resolveRound().catch(ignoreAbort);
     }
   }
 
   async function resolveRound() {
-    const state = battle.state;
-    battle.busy = true;
+    const session = battle;
+    const state = session.state;
+    session.busy = true;
     dom.waiting.classList.remove('show');
     dom.cmdGrid.innerHTML = '<button class="cmd" disabled><b>結算中…</b><small>依速度與技能優先度處理</small></button>';
     dom.phaseLabel.textContent = 'RESOLVE';
-    const order = Engine.resolveTurnOrder(state, battle.locked);
+    const order = Engine.resolveTurnOrder(state, session.locked);
     for (const side of order) {
       if (checkEnd()) break;
-      await presentAction(side, battle.locked[side]);
-      await wait(180);
+      await presentAction(side, session.locked[side]);
+      await session.wait(180);
       updateHUD();
     }
     Engine.endRound(state);
     if (!checkEnd()) {
-      await wait(250);
+      await session.wait(250);
       beginRound();
     }
   }
@@ -460,8 +495,8 @@
         return;
       case 'focus':
         await playFiveFrameAction(side, s, true);
-        log(`${me.character.name} 凝神，回復 ${Engine.RULES.focusMpGain} MP${outcome.hpGain ? `，並因被動回復 ${outcome.hpGain} HP` : ''}。`);
-        fxDamage(side, -Engine.RULES.focusMpGain, '✦');
+        log(`${me.character.name} 凝神，回復 ${outcome.mpGain} MP${outcome.hpGain ? `，並因被動回復 ${outcome.hpGain} HP` : ''}。`);
+        fxDamage(side, -outcome.mpGain, '✦');
         if (outcome.hpGain) fxText(side, `+${outcome.hpGain} HP`, 'heal');
         return;
       case 'guard':
@@ -522,7 +557,7 @@
     spawnImpactBurst(loser, 'rgba(255,108,112,.5)', 'K.O.');
     stageBanner('K.O.', '', true);
     shakeStage();
-    setTimeout(() => showResult(winner), 1220);
+    battle.later(() => showResult(winner), 1220);
     return true;
   }
 
@@ -542,6 +577,7 @@
   }
 
   function backSelect() {
+    if (battle) battle.dispose();
     clearFighterVisualState();
     dom.battleScreen.classList.remove('active');
     dom.selectScreen.classList.add('active');

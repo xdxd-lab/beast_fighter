@@ -327,3 +327,61 @@ test('determinism: the same seed replays the same battle', () => {
   assert.equal(run(99), run(99));
   assert.notEqual(run(99), run(100));
 });
+
+/* ----------------------------------------------------------------- V10 fixes */
+
+test('fix: panda passive uses the real turn order (no extra speed re-roll)', () => {
+  // panda basic (16) atk 16 vs bear def 7
+  const first = battle('panda', 'bear', scripted(...HIT_NO_CRIT_FLAT));
+  first.order = [0, 1];
+  assert.equal(Engine.resolveAction(first, 0, skillOf('panda', 'basic')).damage, 25); // 16*1.12+11.52-4.41
+  const second = battle('panda', 'bear', scripted(...HIT_NO_CRIT_FLAT));
+  second.order = [1, 0];
+  const rng = second.rng;
+  assert.equal(Engine.resolveAction(second, 0, skillOf('panda', 'basic')).damage, 23); // 16+11.52-4.41
+  assert.equal(rng.calls(), 3, 'hit, crit and jitter only');
+});
+
+test('fix: a stunned CPU loses its turn and recovers', () => {
+  const st = battle('bear', 'orca', scripted(0.5));
+  st.fighters[1].stun = true;
+  const pick = Engine.cpuChooseAction(st, 1, UTILITY_SKILLS);
+  assert.equal(pick.type, 'skip');
+  assert.equal(st.fighters[1].stun, false);
+  assert.notEqual(Engine.cpuChooseAction(st, 1, UTILITY_SKILLS).type, 'skip');
+});
+
+test('fix: CPU does not keep stacking shields or focusing at full MP', () => {
+  const rng = Engine.createRng(3);
+  for (let i = 0; i < 500; i++) {
+    const st = battle('bear', 'jelly', rng);
+    st.fighters[1].shield = 12 + Math.floor(rng() * 60);
+    const pick = Engine.cpuChooseAction(st, 1, UTILITY_SKILLS);
+    assert.notEqual(pick.type, 'shield');
+    assert.notEqual(pick.id, 'focus');
+  }
+});
+
+test('every matchup finishes (CPU vs CPU, 36 matchups x 10 seeds)', () => {
+  const longest = { rounds: 0 };
+  for (let i = 0; i < CHARACTERS.length; i++) {
+    for (let j = 0; j < CHARACTERS.length; j++) {
+      for (let k = 0; k < 10; k++) {
+        const st = battle(CHARACTERS[i].id, CHARACTERS[j].id, Engine.createRng(1000 + i * 97 + j * 13 + k));
+        while (!st.ended && st.round < 400) {
+          Engine.startRound(st);
+          if (Engine.checkWinner(st) !== null) break;
+          const acts = [0, 1].map((s) => Engine.cpuChooseAction(st, s, UTILITY_SKILLS));
+          for (const side of Engine.resolveTurnOrder(st, acts)) {
+            if (Engine.checkWinner(st) !== null) break;
+            Engine.resolveAction(st, side, acts[side]);
+          }
+          Engine.endRound(st);
+        }
+        assert.ok(st.ended, `${CHARACTERS[i].id} vs ${CHARACTERS[j].id} seed ${k} did not finish`);
+        longest.rounds = Math.max(longest.rounds, st.round);
+      }
+    }
+  }
+  assert.ok(longest.rounds < 400);
+});
