@@ -292,7 +292,7 @@
 
   /** CPU jelly cashes in a big shield (shield charge) instead of stacking more. */
   const CPU_CHARGE_SHIELD = 40;
-  const CPU_CHARGE_CHANCE = 0.5;
+  const CPU_CHARGE_CHANCE = 0.8;
 
   /**
    * Heuristic CPU opponent: heals/shields when hurt, focuses when dry, finishes when the

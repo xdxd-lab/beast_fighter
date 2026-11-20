@@ -388,7 +388,7 @@ test('passive: a landed jelly attack spends half its shield, 80% of that as bonu
   assert.equal(miss.fighters[0].shield, 80);
 });
 
-test('CPU jelly cashes in a shield of 40+ by attacking at least half the time', () => {
+test('CPU jelly cashes in a shield of 40+ by attacking most of the time', () => {
   const rng = Engine.createRng(11);
   let attacks = 0;
   for (let i = 0; i < 800; i++) {
@@ -396,7 +396,7 @@ test('CPU jelly cashes in a shield of 40+ by attacking at least half the time', 
     st.fighters[1].shield = 40;
     if (Engine.cpuChooseAction(st, 1, UTILITY_SKILLS).id === 'basic') attacks++;
   }
-  assert.ok(attacks > 400, `attacked ${attacks}/800`);
+  assert.ok(attacks > 560, `attacked ${attacks}/800`);
 });
 
 test('CPU random pool may pick shields with shield up and focus at full MP (V9 behaviour)', () => {
