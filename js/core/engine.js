@@ -40,9 +40,9 @@
     weakenTurns: 2,
     slowTurns: 2,
     jellyShieldMultiplier: 1.2,
-    jellyShieldDecay: 0.1,      // jelly's leftover shield loses 10% (rounded up) each time it acts again
+    jellyShieldDecay: 0.2,      // jelly's leftover shield loses 20% (rounded up) each time it acts again
     jellyChargeSpend: 0.5,      // on a landed jelly attack, this share of its shield is spent...
-    jellyChargeDamage: 0.5,     // ...and this share of the spent shield becomes flat bonus damage
+    jellyChargeDamage: 0.8,     // ...and this share of the spent shield becomes flat bonus damage
   });
 
   /** Command types that never target the opponent. */

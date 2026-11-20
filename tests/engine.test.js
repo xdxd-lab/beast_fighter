@@ -200,21 +200,21 @@ test('passive: orca focus also heals up to 6 HP', () => {
 test('passive: jelly shields are 20% stronger', () => {
   const st = battle('jelly', 'bear');
   assert.equal(Engine.resolveAction(st, 0, skillOf('jelly', 's1')).shieldGain, 29);
-  // acting again first sheds ceil(29 * 10%) = 3 of the leftover shield
+  // acting again first sheds ceil(29 * 20%) = 6 of the leftover shield
   const second = Engine.resolveAction(st, 0, skillOf('jelly', 's2'));
-  assert.equal(second.shieldDecay, 3);
+  assert.equal(second.shieldDecay, 6);
   assert.equal(second.shieldGain, 48);
-  assert.equal(st.fighters[0].shield, 74);
+  assert.equal(st.fighters[0].shield, 71);
 });
 
-test('passive: jelly sheds 10% of leftover shield on each later action, not when skipped', () => {
+test('passive: jelly sheds 20% of leftover shield on each later action, not when skipped', () => {
   const guard = UTILITY_SKILLS.find((s) => s.id === 'guard');
   const st = battle('jelly', 'bear');
   st.fighters[0].shield = 50;
   assert.equal(Engine.resolveAction(st, 0, Engine.SKIP_ACTION).shieldDecay, 0);
   assert.equal(st.fighters[0].shield, 50);
-  assert.equal(Engine.resolveAction(st, 0, guard).shieldDecay, 5);
-  assert.equal(st.fighters[0].shield, 45);
+  assert.equal(Engine.resolveAction(st, 0, guard).shieldDecay, 10);
+  assert.equal(st.fighters[0].shield, 40);
   st.fighters[0].shield = 1;
   Engine.resolveAction(st, 0, guard);
   assert.equal(st.fighters[0].shield, 0);
@@ -370,22 +370,22 @@ test('fix: a stunned CPU loses its turn and recovers', () => {
   assert.notEqual(Engine.cpuChooseAction(st, 1, UTILITY_SKILLS).type, 'skip');
 });
 
-test('passive: a landed jelly attack spends half its shield, half of that as bonus damage', () => {
+test('passive: a landed jelly attack spends half its shield, 80% of that as bonus damage', () => {
   const st = battle('jelly', 'bear', scripted(...HIT_NO_CRIT_FLAT));
   const plain = battle('jelly', 'bear', scripted(...HIT_NO_CRIT_FLAT));
-  st.fighters[0].shield = 100; // decays to 90 when jelly acts, then spends 45 -> +22
+  st.fighters[0].shield = 100; // decays to 80 when jelly acts, then spends 40 -> +32
   const hit = Engine.resolveAction(st, 0, skillOf('jelly', 'basic'));
   const base = Engine.resolveAction(plain, 0, skillOf('jelly', 'basic')).damage;
-  assert.equal(hit.chargeSpent, 45);
-  assert.equal(hit.chargeBonus, 22);
-  assert.equal(hit.damage, base + 22);
-  assert.equal(st.fighters[0].shield, 45);
+  assert.equal(hit.chargeSpent, 40);
+  assert.equal(hit.chargeBonus, 32);
+  assert.equal(hit.damage, base + 32);
+  assert.equal(st.fighters[0].shield, 40);
   const miss = battle('jelly', 'bear', scripted(0.999));
   miss.fighters[0].shield = 100;
   const missed = Engine.resolveAction(miss, 0, { ...skillOf('jelly', 'basic'), acc: 50 });
   assert.equal(missed.hit, false);
   assert.equal(missed.chargeSpent, 0);
-  assert.equal(miss.fighters[0].shield, 90);
+  assert.equal(miss.fighters[0].shield, 80);
 });
 
 test('CPU random pool may pick shields with shield up and focus at full MP (V9 behaviour)', () => {
