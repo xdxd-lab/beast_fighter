@@ -784,6 +784,10 @@
     const op = state.fighters[1 - side];
     const outcome = Engine.resolveAction(state, side, skill);
     const s = skill;
+    if (outcome.shieldDecay) {
+      log(`${me.character.name} 的護盾流失 ${outcome.shieldDecay} 點。`, 'sys');
+      updateHUD();
+    }
 
     switch (outcome.kind) {
       case 'skip':
@@ -827,6 +831,10 @@
       log(`${me.character.name} 的「${s.name}」落空！`, 'sys');
       fxText(1 - side, 'MISS', 'miss');
       return;
+    }
+    if (outcome.chargeSpent) {
+      log(`${me.character.name} 釋放蓄電護盾 ${outcome.chargeSpent} 點，追加 ${outcome.chargeBonus} 點傷害！`, 'buff');
+      updateHUD();
     }
     log(`${me.character.name} 使用「${s.name}」造成 ${outcome.damage}${outcome.absorbed ? `（護盾吸收 ${outcome.absorbed}）` : ''} 點傷害${outcome.crit ? '，暴擊！' : ''}`, outcome.crit ? 'crit' : 'dmg');
     if (outcome.crit) spawnImpactBurst(1 - side, 'rgba(255,221,117,.56)', 'CRIT');

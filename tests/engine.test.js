@@ -197,12 +197,31 @@ test('passive: orca focus also heals up to 6 HP', () => {
   assert.equal(st.fighters[0].mp, 108); // capped at max
 });
 
-test('passive: jelly shields are 25% stronger', () => {
+test('passive: jelly shields are 30% stronger', () => {
   const st = battle('jelly', 'bear');
-  assert.equal(Engine.resolveAction(st, 0, skillOf('jelly', 's1')).shieldGain, 30);
-  assert.equal(Engine.resolveAction(st, 0, skillOf('jelly', 's2')).shieldGain, 50);
-  assert.equal(st.fighters[0].shield, 80);
-  assert.equal(st.fighters[0].mp, 92 - 16 - 28);
+  assert.equal(Engine.resolveAction(st, 0, skillOf('jelly', 's1')).shieldGain, 31);
+  // acting again first sheds ceil(31 * 20%) = 7 of the leftover shield
+  const second = Engine.resolveAction(st, 0, skillOf('jelly', 's2'));
+  assert.equal(second.shieldDecay, 7);
+  assert.equal(second.shieldGain, 52);
+  assert.equal(st.fighters[0].shield, 76);
+});
+
+test('passive: jelly sheds 20% of leftover shield on each later action, not when skipped', () => {
+  const guard = UTILITY_SKILLS.find((s) => s.id === 'guard');
+  const st = battle('jelly', 'bear');
+  st.fighters[0].shield = 50;
+  assert.equal(Engine.resolveAction(st, 0, Engine.SKIP_ACTION).shieldDecay, 0);
+  assert.equal(st.fighters[0].shield, 50);
+  assert.equal(Engine.resolveAction(st, 0, guard).shieldDecay, 10);
+  assert.equal(st.fighters[0].shield, 40);
+  st.fighters[0].shield = 1;
+  Engine.resolveAction(st, 0, guard);
+  assert.equal(st.fighters[0].shield, 0);
+  const other = battle('bear', 'jelly');
+  other.fighters[0].shield = 50;
+  assert.equal(Engine.resolveAction(other, 0, guard).shieldDecay, 0);
+  assert.equal(other.fighters[0].shield, 50);
 });
 
 /* ----------------------------------------------------------------- support */
@@ -351,15 +370,47 @@ test('fix: a stunned CPU loses its turn and recovers', () => {
   assert.notEqual(Engine.cpuChooseAction(st, 1, UTILITY_SKILLS).type, 'skip');
 });
 
-test('fix: CPU does not keep stacking shields or focusing at full MP', () => {
-  const rng = Engine.createRng(3);
-  for (let i = 0; i < 500; i++) {
+test('passive: a landed jelly attack spends half its shield, 80% of that as bonus damage', () => {
+  const st = battle('jelly', 'bear', scripted(...HIT_NO_CRIT_FLAT));
+  const plain = battle('jelly', 'bear', scripted(...HIT_NO_CRIT_FLAT));
+  st.fighters[0].shield = 100; // decays to 80 when jelly acts, then spends 40 -> +32
+  const hit = Engine.resolveAction(st, 0, skillOf('jelly', 'basic'));
+  const base = Engine.resolveAction(plain, 0, skillOf('jelly', 'basic')).damage;
+  assert.equal(hit.chargeSpent, 40);
+  assert.equal(hit.chargeBonus, 32);
+  assert.equal(hit.damage, base + 32);
+  assert.equal(st.fighters[0].shield, 40);
+  const miss = battle('jelly', 'bear', scripted(0.999));
+  miss.fighters[0].shield = 100;
+  const missed = Engine.resolveAction(miss, 0, { ...skillOf('jelly', 'basic'), acc: 50 });
+  assert.equal(missed.hit, false);
+  assert.equal(missed.chargeSpent, 0);
+  assert.equal(miss.fighters[0].shield, 80);
+});
+
+test('CPU jelly cashes in a shield of 40+ by attacking most of the time', () => {
+  const rng = Engine.createRng(11);
+  let attacks = 0;
+  for (let i = 0; i < 800; i++) {
     const st = battle('bear', 'jelly', rng);
-    st.fighters[1].shield = 12 + Math.floor(rng() * 60);
-    const pick = Engine.cpuChooseAction(st, 1, UTILITY_SKILLS);
-    assert.notEqual(pick.type, 'shield');
-    assert.notEqual(pick.id, 'focus');
+    st.fighters[1].shield = 40;
+    if (Engine.cpuChooseAction(st, 1, UTILITY_SKILLS).id === 'basic') attacks++;
   }
+  assert.ok(attacks > 560, `attacked ${attacks}/800`);
+});
+
+test('CPU random pool may pick shields with shield up and focus at full MP (V9 behaviour)', () => {
+  const rng = Engine.createRng(3);
+  let shields = 0;
+  let focuses = 0;
+  for (let i = 0; i < 800; i++) {
+    const st = battle('bear', 'jelly', rng);
+    st.fighters[1].shield = 60;
+    const pick = Engine.cpuChooseAction(st, 1, UTILITY_SKILLS);
+    if (pick.type === 'shield') shields++;
+    if (pick.id === 'focus') focuses++;
+  }
+  assert.ok(shields > 0 && focuses > 0);
 });
 
 test('every matchup finishes (CPU vs CPU, 36 matchups x 10 seeds)', () => {

@@ -39,7 +39,10 @@
     poisonTurns: 3,
     weakenTurns: 2,
     slowTurns: 2,
-    jellyShieldMultiplier: 1.25,
+    jellyShieldMultiplier: 1.3,
+    jellyShieldDecay: 0.2,      // jelly's leftover shield loses 20% (rounded up) each time it acts again
+    jellyChargeSpend: 0.5,      // on a landed jelly attack, this share of its shield is spent...
+    jellyChargeDamage: 0.8,     // ...and this share of the spent shield becomes flat bonus damage
   });
 
   /** Command types that never target the opponent. */
@@ -165,12 +168,16 @@
     const me = state.fighters[side];
     const op = state.fighters[1 - side];
     const stats = state.stats[side];
-    const outcome = { side, skill, kind: 'attack', hit: true, damage: 0, absorbed: 0, crit: false, mpGain: 0, hpGain: 0, shieldGain: 0, statuses: [] };
+    const outcome = { side, skill, kind: 'attack', hit: true, damage: 0, absorbed: 0, crit: false, mpGain: 0, hpGain: 0, shieldGain: 0, shieldDecay: 0, chargeSpent: 0, chargeBonus: 0, statuses: [] };
 
     if (!skill || skill.type === 'skip') {
       outcome.kind = 'skip';
       outcome.hit = false;
       return outcome;
+    }
+    if (me.character.id === 'jelly' && me.shield > 0) {
+      outcome.shieldDecay = Math.min(me.shield, Math.ceil(me.shield * RULES.jellyShieldDecay));
+      me.shield -= outcome.shieldDecay;
     }
     me.lastAction = skill.id;
     stats.actions++;
@@ -229,6 +236,12 @@
     let dmg = Math.max(RULES.minDamage, Math.round(raw - def * RULES.defenseScale));
     if (outcome.crit) dmg = Math.round(dmg * RULES.critMultiplier);
     if (op.guard) dmg = Math.round(dmg * RULES.guardDamageMultiplier);
+    if (me.character.id === 'jelly' && me.shield > 0) {
+      outcome.chargeSpent = Math.floor(me.shield * RULES.jellyChargeSpend);
+      outcome.chargeBonus = Math.floor(outcome.chargeSpent * RULES.jellyChargeDamage);
+      me.shield -= outcome.chargeSpent;
+      dmg += outcome.chargeBonus;
+    }
 
     if (op.shield > 0) {
       outcome.absorbed = Math.min(op.shield, dmg);
@@ -277,9 +290,9 @@
     return SKIP_ACTION;
   }
 
-  /** CPU only refreshes shields / focuses through the random pool when it is worth it. */
-  const CPU_SHIELD_REFRESH_BELOW = 12;
-  const CPU_FOCUS_SLACK = 4;
+  /** CPU jelly cashes in a big shield (shield charge) instead of stacking more. */
+  const CPU_CHARGE_SHIELD = 40;
+  const CPU_CHARGE_CHANCE = 0.8;
 
   /**
    * Heuristic CPU opponent: heals/shields when hurt, focuses when dry, finishes when the
@@ -298,6 +311,10 @@
     const shield = options.filter((s) => s.type === 'shield').sort((a, b) => (b.power || 0) - (a.power || 0))[0];
 
     if (heal && hpRatio < 0.42 && rng() < 0.72) return heal;
+    if (me.character.id === 'jelly' && me.shield >= CPU_CHARGE_SHIELD && rng() < CPU_CHARGE_CHANCE) {
+      const strike = options.filter((s) => OFFENSIVE_TYPES.includes(s.type)).sort((x, y) => (y.power || 0) - (x.power || 0))[0];
+      if (strike) return strike;
+    }
     if (shield && me.shield < 12 && hpRatio < 0.68 && rng() < 0.58) return shield;
     if (hpRatio < 0.28 && rng() < 0.32) return guard;
     if (me.mp < 18 && rng() < 0.45) return focus;
@@ -307,8 +324,6 @@
     }
     const pool = options.filter((s) =>
       s.type !== 'heal' &&
-      (s.type !== 'shield' || me.shield < CPU_SHIELD_REFRESH_BELOW) &&
-      (s.id !== 'focus' || me.mp < me.maxMp - CPU_FOCUS_SLACK) &&
       (s.id !== 'guard' || rng() < 0.35));
     return pool[Math.floor(rng() * pool.length)] || focus;
   }
