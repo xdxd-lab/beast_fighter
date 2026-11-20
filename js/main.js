@@ -832,6 +832,10 @@
       fxText(1 - side, 'MISS', 'miss');
       return;
     }
+    if (outcome.chargeSpent) {
+      log(`${me.character.name} 釋放蓄電護盾 ${outcome.chargeSpent} 點，追加 ${outcome.chargeBonus} 點傷害！`, 'buff');
+      updateHUD();
+    }
     log(`${me.character.name} 使用「${s.name}」造成 ${outcome.damage}${outcome.absorbed ? `（護盾吸收 ${outcome.absorbed}）` : ''} 點傷害${outcome.crit ? '，暴擊！' : ''}`, outcome.crit ? 'crit' : 'dmg');
     if (outcome.crit) spawnImpactBurst(1 - side, 'rgba(255,221,117,.56)', 'CRIT');
     if (outcome.absorbed) {

@@ -370,6 +370,24 @@ test('fix: a stunned CPU loses its turn and recovers', () => {
   assert.notEqual(Engine.cpuChooseAction(st, 1, UTILITY_SKILLS).type, 'skip');
 });
 
+test('passive: a landed jelly attack spends half its shield, half of that as bonus damage', () => {
+  const st = battle('jelly', 'bear', scripted(...HIT_NO_CRIT_FLAT));
+  const plain = battle('jelly', 'bear', scripted(...HIT_NO_CRIT_FLAT));
+  st.fighters[0].shield = 100; // decays to 90 when jelly acts, then spends 45 -> +22
+  const hit = Engine.resolveAction(st, 0, skillOf('jelly', 'basic'));
+  const base = Engine.resolveAction(plain, 0, skillOf('jelly', 'basic')).damage;
+  assert.equal(hit.chargeSpent, 45);
+  assert.equal(hit.chargeBonus, 22);
+  assert.equal(hit.damage, base + 22);
+  assert.equal(st.fighters[0].shield, 45);
+  const miss = battle('jelly', 'bear', scripted(0.999));
+  miss.fighters[0].shield = 100;
+  const missed = Engine.resolveAction(miss, 0, { ...skillOf('jelly', 'basic'), acc: 50 });
+  assert.equal(missed.hit, false);
+  assert.equal(missed.chargeSpent, 0);
+  assert.equal(miss.fighters[0].shield, 90);
+});
+
 test('CPU random pool may pick shields with shield up and focus at full MP (V9 behaviour)', () => {
   const rng = Engine.createRng(3);
   let shields = 0;

@@ -41,6 +41,8 @@
     slowTurns: 2,
     jellyShieldMultiplier: 1.2,
     jellyShieldDecay: 0.1,      // jelly's leftover shield loses 10% (rounded up) each time it acts again
+    jellyChargeSpend: 0.5,      // on a landed jelly attack, this share of its shield is spent...
+    jellyChargeDamage: 0.5,     // ...and this share of the spent shield becomes flat bonus damage
   });
 
   /** Command types that never target the opponent. */
@@ -166,7 +168,7 @@
     const me = state.fighters[side];
     const op = state.fighters[1 - side];
     const stats = state.stats[side];
-    const outcome = { side, skill, kind: 'attack', hit: true, damage: 0, absorbed: 0, crit: false, mpGain: 0, hpGain: 0, shieldGain: 0, shieldDecay: 0, statuses: [] };
+    const outcome = { side, skill, kind: 'attack', hit: true, damage: 0, absorbed: 0, crit: false, mpGain: 0, hpGain: 0, shieldGain: 0, shieldDecay: 0, chargeSpent: 0, chargeBonus: 0, statuses: [] };
 
     if (!skill || skill.type === 'skip') {
       outcome.kind = 'skip';
@@ -234,6 +236,12 @@
     let dmg = Math.max(RULES.minDamage, Math.round(raw - def * RULES.defenseScale));
     if (outcome.crit) dmg = Math.round(dmg * RULES.critMultiplier);
     if (op.guard) dmg = Math.round(dmg * RULES.guardDamageMultiplier);
+    if (me.character.id === 'jelly' && me.shield > 0) {
+      outcome.chargeSpent = Math.floor(me.shield * RULES.jellyChargeSpend);
+      outcome.chargeBonus = Math.floor(outcome.chargeSpent * RULES.jellyChargeDamage);
+      me.shield -= outcome.chargeSpent;
+      dmg += outcome.chargeBonus;
+    }
 
     if (op.shield > 0) {
       outcome.absorbed = Math.min(op.shield, dmg);
