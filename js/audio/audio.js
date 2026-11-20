@@ -536,8 +536,8 @@
   /* ================================================================ public facade */
 
   // Bus trims chosen from offline loudness checks (RMS above 300 Hz; see docs/AUDIO.md).
-  const MUSIC_TRIM = 1.4;
-  const SFX_TRIM = 2.6;
+  const MUSIC_TRIM = 3.6;
+  const SFX_TRIM = 5.2;
   const params = new URLSearchParams((root.location && root.location.search) || '');
   const forcedMute = params.get('mute') === '1';
 

@@ -2,6 +2,13 @@
 
 本專案遵循 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.1.0/) 格式，版本號採用 [Semantic Versioning](https://semver.org/lang/zh-TW/)。
 
+## [Unreleased]
+
+### Changed
+
+- 背景音樂音量提高約 7 dB（300 Hz 以上 RMS 約 −27 → −20 dB），音效提高約 3 dB 以維持在音樂之上。
+- `audio_check.py` 的音樂試聽檔改為完整渲染一整輪樂曲加殘響尾音，不再在樂句中途截斷。
+
 ## [10.0.0] — 2026-11-20
 
 V10 把 V9 原型整理成可長期維護、可測試的商業級網頁遊戲。所有角色數值與技能說明維持不變。
