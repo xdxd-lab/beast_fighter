@@ -290,6 +290,10 @@
     return SKIP_ACTION;
   }
 
+  /** CPU jelly cashes in a big shield (shield charge) instead of stacking more. */
+  const CPU_CHARGE_SHIELD = 40;
+  const CPU_CHARGE_CHANCE = 0.5;
+
   /**
    * Heuristic CPU opponent: heals/shields when hurt, focuses when dry, finishes when the
    * opponent is low, otherwise picks a random affordable command. A stunned CPU skips.
@@ -307,6 +311,10 @@
     const shield = options.filter((s) => s.type === 'shield').sort((a, b) => (b.power || 0) - (a.power || 0))[0];
 
     if (heal && hpRatio < 0.42 && rng() < 0.72) return heal;
+    if (me.character.id === 'jelly' && me.shield >= CPU_CHARGE_SHIELD && rng() < CPU_CHARGE_CHANCE) {
+      const strike = options.filter((s) => OFFENSIVE_TYPES.includes(s.type)).sort((x, y) => (y.power || 0) - (x.power || 0))[0];
+      if (strike) return strike;
+    }
     if (shield && me.shield < 12 && hpRatio < 0.68 && rng() < 0.58) return shield;
     if (hpRatio < 0.28 && rng() < 0.32) return guard;
     if (me.mp < 18 && rng() < 0.45) return focus;
