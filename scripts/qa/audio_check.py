@@ -48,10 +48,17 @@ JS = r'''
     for (let i = 0; i < u.length; i += 32768) out += String.fromCharCode.apply(null, u.subarray(i, i + 32768));
     return btoa(out);
   }
+  const TAIL = 2.5;
+  // Track lengths come from the engine's own tempo/bar data (probe render, no hard-coded copies).
+  const LEN = {};
+  await A.renderOffline(0.01, (e) => { for (const [n, t] of Object.entries(e.TRACKS)) LEN[n] = t.bars * 16 * (60 / t.bpm / 4); });
+  const loopSeconds = (name) => LEN[name];
   const jobs = {
-    'music-select': [16, (e) => { e.startTrack('select', 0.05); e.scheduleUntil(16); }],
-    'music-battle': [14, (e) => { e.startTrack('battle', 0.05); e.scheduleUntil(14); }],
-    'music-victory': [4, (e) => { e.startTrack('victory', 0.05); e.scheduleUntil(4); }],
+    // Music previews render exactly one full loop (every bar of the piece) plus a reverb tail,
+    // so the WAV ends where the piece ends instead of cutting off mid-phrase.
+    'music-select': [loopSeconds('select') + TAIL, (e) => { e.startTrack('select', 0.05); e.scheduleUntil(0.05 + loopSeconds('select') - 1e-3); }],
+    'music-battle': [loopSeconds('battle') + TAIL, (e) => { e.startTrack('battle', 0.05); e.scheduleUntil(0.05 + loopSeconds('battle') - 1e-3); }],
+    'music-victory': [loopSeconds('victory') + TAIL, (e) => { e.startTrack('victory', 0.05); e.scheduleUntil(0.05 + loopSeconds('victory') - 1e-3); }],
     'sfx-ui': [3.2, (e) => ['ui-hover', 'ui-click', 'ui-select', 'ui-confirm', 'ui-back', 'ui-error', 'ui-toggle'].forEach((n, i) => e.playSfx(n, { t: 0.05 + i * 0.42 }))],
     'sfx-combat': [9, (e) => ['round', 'fight', 'hit', 'heavy', 'crit', 'miss', 'guard', 'shield', 'heal', 'focus', 'stun', 'cutin', 'ko'].forEach((n, i) => e.playSfx(n, { t: 0.05 + i * 0.65 }))],
     'sfx-skills': [16, (e) => { let t = 0.05; BeastBrawl.Roster.CHARACTERS.forEach((c) => c.skills.forEach((s) => { e.playSkill(s, 'cast', { t }); e.playSkill(s, 'impact', { t: t + 0.55 }); t += 0.85; })); }],
