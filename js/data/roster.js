@@ -71,7 +71,7 @@
     },
     {
       id: 'orca', name: '歐洛', animal: '虎鯨', job: '深海吟遊詩人',
-      hp: 122, mp: 108, atk: 10.8, def: 9, spd: 9,
+      hp: 122, mp: 108, atk: 11, def: 9, spd: 9,
       passive: '深海安可：使用「凝神」時額外回復 6 HP。看起來像海中霸主，實際上更在意音準與舞台效果。',
       skills: [
         { id: 'basic', name: '鯨歌音符', cost: 0, desc: '把一枚低音音符送向對手', type: 'magic', power: 13, acc: 98, fx: 'note' },
