@@ -784,6 +784,10 @@
     const op = state.fighters[1 - side];
     const outcome = Engine.resolveAction(state, side, skill);
     const s = skill;
+    if (outcome.shieldDecay) {
+      log(`${me.character.name} 的護盾流失 ${outcome.shieldDecay} 點。`, 'sys');
+      updateHUD();
+    }
 
     switch (outcome.kind) {
       case 'skip':

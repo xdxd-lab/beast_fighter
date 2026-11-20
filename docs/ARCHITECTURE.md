@@ -54,7 +54,7 @@ resolveRound()
   └ checkEnd() → K.O. 演出 → showResult()
 ```
 
-`resolveAction` 會回傳純資料物件：`{ kind, hit, damage, absorbed, crit, mpGain, hpGain, shieldGain, statuses }`。控制器不會自己算傷害。
+`resolveAction` 會回傳純資料物件：`{ kind, hit, damage, absorbed, crit, mpGain, hpGain, shieldGain, shieldDecay, statuses }`。控制器不會自己算傷害。
 
 ## BattleSession：戰鬥生命週期
 

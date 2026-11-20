@@ -39,7 +39,8 @@
     poisonTurns: 3,
     weakenTurns: 2,
     slowTurns: 2,
-    jellyShieldMultiplier: 1.25,
+    jellyShieldMultiplier: 1.2,
+    jellyShieldDecay: 0.1,      // jelly's leftover shield loses 10% (rounded up) each time it acts again
   });
 
   /** Command types that never target the opponent. */
@@ -165,12 +166,16 @@
     const me = state.fighters[side];
     const op = state.fighters[1 - side];
     const stats = state.stats[side];
-    const outcome = { side, skill, kind: 'attack', hit: true, damage: 0, absorbed: 0, crit: false, mpGain: 0, hpGain: 0, shieldGain: 0, statuses: [] };
+    const outcome = { side, skill, kind: 'attack', hit: true, damage: 0, absorbed: 0, crit: false, mpGain: 0, hpGain: 0, shieldGain: 0, shieldDecay: 0, statuses: [] };
 
     if (!skill || skill.type === 'skip') {
       outcome.kind = 'skip';
       outcome.hit = false;
       return outcome;
+    }
+    if (me.character.id === 'jelly' && me.shield > 0) {
+      outcome.shieldDecay = Math.min(me.shield, Math.ceil(me.shield * RULES.jellyShieldDecay));
+      me.shield -= outcome.shieldDecay;
     }
     me.lastAction = skill.id;
     stats.actions++;
@@ -277,10 +282,6 @@
     return SKIP_ACTION;
   }
 
-  /** CPU only refreshes shields / focuses through the random pool when it is worth it. */
-  const CPU_SHIELD_REFRESH_BELOW = 12;
-  const CPU_FOCUS_SLACK = 4;
-
   /**
    * Heuristic CPU opponent: heals/shields when hurt, focuses when dry, finishes when the
    * opponent is low, otherwise picks a random affordable command. A stunned CPU skips.
@@ -307,8 +308,6 @@
     }
     const pool = options.filter((s) =>
       s.type !== 'heal' &&
-      (s.type !== 'shield' || me.shield < CPU_SHIELD_REFRESH_BELOW) &&
-      (s.id !== 'focus' || me.mp < me.maxMp - CPU_FOCUS_SLACK) &&
       (s.id !== 'guard' || rng() < 0.35));
     return pool[Math.floor(rng() * pool.length)] || focus;
   }

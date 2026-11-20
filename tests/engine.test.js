@@ -197,12 +197,31 @@ test('passive: orca focus also heals up to 6 HP', () => {
   assert.equal(st.fighters[0].mp, 108); // capped at max
 });
 
-test('passive: jelly shields are 25% stronger', () => {
+test('passive: jelly shields are 20% stronger', () => {
   const st = battle('jelly', 'bear');
-  assert.equal(Engine.resolveAction(st, 0, skillOf('jelly', 's1')).shieldGain, 30);
-  assert.equal(Engine.resolveAction(st, 0, skillOf('jelly', 's2')).shieldGain, 50);
-  assert.equal(st.fighters[0].shield, 80);
-  assert.equal(st.fighters[0].mp, 92 - 16 - 28);
+  assert.equal(Engine.resolveAction(st, 0, skillOf('jelly', 's1')).shieldGain, 29);
+  // acting again first sheds ceil(29 * 10%) = 3 of the leftover shield
+  const second = Engine.resolveAction(st, 0, skillOf('jelly', 's2'));
+  assert.equal(second.shieldDecay, 3);
+  assert.equal(second.shieldGain, 48);
+  assert.equal(st.fighters[0].shield, 74);
+});
+
+test('passive: jelly sheds 10% of leftover shield on each later action, not when skipped', () => {
+  const guard = UTILITY_SKILLS.find((s) => s.id === 'guard');
+  const st = battle('jelly', 'bear');
+  st.fighters[0].shield = 50;
+  assert.equal(Engine.resolveAction(st, 0, Engine.SKIP_ACTION).shieldDecay, 0);
+  assert.equal(st.fighters[0].shield, 50);
+  assert.equal(Engine.resolveAction(st, 0, guard).shieldDecay, 5);
+  assert.equal(st.fighters[0].shield, 45);
+  st.fighters[0].shield = 1;
+  Engine.resolveAction(st, 0, guard);
+  assert.equal(st.fighters[0].shield, 0);
+  const other = battle('bear', 'jelly');
+  other.fighters[0].shield = 50;
+  assert.equal(Engine.resolveAction(other, 0, guard).shieldDecay, 0);
+  assert.equal(other.fighters[0].shield, 50);
 });
 
 /* ----------------------------------------------------------------- support */
@@ -351,15 +370,18 @@ test('fix: a stunned CPU loses its turn and recovers', () => {
   assert.notEqual(Engine.cpuChooseAction(st, 1, UTILITY_SKILLS).type, 'skip');
 });
 
-test('fix: CPU does not keep stacking shields or focusing at full MP', () => {
+test('CPU random pool may pick shields with shield up and focus at full MP (V9 behaviour)', () => {
   const rng = Engine.createRng(3);
-  for (let i = 0; i < 500; i++) {
+  let shields = 0;
+  let focuses = 0;
+  for (let i = 0; i < 800; i++) {
     const st = battle('bear', 'jelly', rng);
-    st.fighters[1].shield = 12 + Math.floor(rng() * 60);
+    st.fighters[1].shield = 60;
     const pick = Engine.cpuChooseAction(st, 1, UTILITY_SKILLS);
-    assert.notEqual(pick.type, 'shield');
-    assert.notEqual(pick.id, 'focus');
+    if (pick.type === 'shield') shields++;
+    if (pick.id === 'focus') focuses++;
   }
+  assert.ok(shields > 0 && focuses > 0);
 });
 
 test('every matchup finishes (CPU vs CPU, 36 matchups x 10 seeds)', () => {
