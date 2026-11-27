@@ -94,6 +94,7 @@ def check(browser, expression, label, timeout=None):
 
 
 def visit(browser, url):
+    if url.startswith('http'): url += ('&' if '?' in url else '?') + 'introStyle=original'
     browser.goto(url, settle=0.15)
     browser.eval(HELPERS)
 
@@ -104,7 +105,7 @@ def main():
         c.call("Network.setCacheDisabled", cacheDisabled=True)
         gates[PORTRAITS] = Event()
         gates[STILL] = Event()
-        visit(c, url + "?mode=local&seed=11&mute=1&intro=0")
+        visit(c, url + "?arena=snow&mode=local&seed=11&mute=1&intro=0")
         check(c, "artDirectionSign(q('#p1Roster .portrait > svg')) === 1 && "
                  "artDirectionSign(q('#p2Roster .portrait > svg')) === -1 && "
                  "artDirectionSign(q('#p2Detail .big-portrait > svg')) === -1 && "
@@ -158,7 +159,7 @@ def main():
         for path in VIDEO:
             gates[path] = Event()
         c.viewport(390, 844, mobile=True, dpr=2)
-        visit(c, url + "?seed=7&mute=1")
+        visit(c, url + "?arena=snow&seed=7&mute=1")
         c.eval("q('#startBtn').click()")
         check(c, "q('.pilot-intro') && visible(q('.pilot-preparation')) && "
                  "!classicTerrain().length && !visible(q('#fighter2'))",
@@ -173,14 +174,14 @@ def main():
         check(c, "readyArt() && !q('.pilot-intro') && !classicTerrain().length",
               "Skip hands off directly from intro to complete 3D art", 4)
 
-        visit(c, url + "?seed=11&mute=1")
+        visit(c, url + "?arena=snow&seed=11&mute=1")
         c.eval("q('#startBtn').click()")
         check(c, "readyArt() && !q('.pilot-intro') && !classicTerrain().length && "
                  "q('#phaseLabel').textContent === 'COMMAND'",
               "A naturally completed intro reveals the exact ready stage and enables commands", 6)
 
         gates[STILL] = Event()
-        visit(c, url + "?intro=0&mute=1")
+        visit(c, url + "?arena=snow&intro=0&mute=1")
         c.eval("q('#startBtn').click(); q('#btnReset').click()")
         gates[STILL].set()
         c.pump(.35)

@@ -48,10 +48,11 @@
         <button class="mode" type="button" data-mode="local" aria-pressed="false">1P vs 2P 雙人同機</button>
         <button class="mode" type="button" data-mode="demo" aria-pressed="false">CPU 觀戰</button>
       </div>
-      <div class="arena-chooser" id="arenaChooser" hidden>
-        <label for="arenaSelect">對戰場景</label>
-        <select id="arenaSelect" name="arena"></select>
-      </div>
+      <fieldset class="arena-chooser" id="arenaChooser" hidden>
+        <legend>對戰場景</legend>
+        <p class="arena-hint" id="arenaRandomHint"></p>
+        <div class="arena-options"></div>
+      </fieldset>
       <div class="setup-grid">
         <div class="panel">
           <div class="panel-head"><h2>選擇左側角色</h2><div class="panel-tools"><button class="mini" type="button" data-random="1" aria-label="左側隨機選角">🎲 隨機</button><span class="badge p1b" id="p1Badge">1P / CYAN</span></div></div>
@@ -97,7 +98,7 @@
       </div>
     </section>
   </main>
-  <footer class="site-footer"><span>萌獸鬥技場 Beast Brawl · v10.2.0</span><span class="keys"><kbd>1</kbd>–<kbd>5</kbd> 指令 · <kbd>Enter</kbd> 開始／再戰 · <kbd>M</kbd> 靜音 · <kbd>S</kbd> 設定 · <kbd>?</kbd> 說明 · <kbd>Esc</kbd> 關閉</span><a href="https://github.com/xdxd-lab/beast_fighter" rel="noopener">GitHub</a></footer>
+  <footer class="site-footer"><span>萌獸鬥技場 Beast Brawl · v10.3.0</span><span class="keys"><kbd>1</kbd>–<kbd>5</kbd> 指令 · <kbd>Enter</kbd> 開始／再戰 · <kbd>M</kbd> 靜音 · <kbd>S</kbd> 設定 · <kbd>?</kbd> 說明 · <kbd>Esc</kbd> 關閉</span><a href="https://github.com/xdxd-lab/beast_fighter" rel="noopener">GitHub</a></footer>
 </div>
 
 <div id="resultOverlay" class="overlay" role="dialog" aria-modal="true" aria-labelledby="resultTitle">
@@ -190,6 +191,7 @@
 <script src="js/fx/touch.js"></script>
 <script src="js/render/release-art.js"></script>
 <script src="js/render/arenas.js"></script>
+<script src="js/render/intro-plans.js"></script>
 <script src="js/render/pilot.js"></script>
 <script src="js/main.js"></script>
 </body>

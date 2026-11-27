@@ -197,14 +197,21 @@ test('passive: orca focus also heals up to 6 HP', () => {
   assert.equal(st.fighters[0].mp, 108); // capped at max
 });
 
-test('passive: jelly shields are 30% stronger', () => {
+test('jelly shield skills grant 32 and 52 directly with no passive multiplier', () => {
   const st = battle('jelly', 'bear');
-  assert.equal(Engine.resolveAction(st, 0, skillOf('jelly', 's1')).shieldGain, 31);
-  // acting again first sheds ceil(31 * 20%) = 7 of the leftover shield
+  assert.equal(Engine.resolveAction(st, 0, skillOf('jelly', 's1')).shieldGain, 32);
+  // acting again first sheds ceil(32 * 20%) = 7 of the leftover shield
   const second = Engine.resolveAction(st, 0, skillOf('jelly', 's2'));
   assert.equal(second.shieldDecay, 7);
   assert.equal(second.shieldGain, 52);
-  assert.equal(st.fighters[0].shield, 76);
+  assert.equal(st.fighters[0].shield, 77);
+});
+
+test('any other shield is not boosted just because jelly is the recipient', () => {
+  const shield = { ...skillOf('jelly', 's1'), power: 10 };
+  const st = battle('jelly', 'bear');
+  assert.equal(Engine.resolveAction(st, 0, shield).shieldGain, 10);
+  assert.equal(Engine.resolveAction(st, 1, shield).shieldGain, 10);
 });
 
 test('passive: jelly sheds 20% of leftover shield on each later action, not when skipped', () => {

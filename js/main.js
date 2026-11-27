@@ -146,8 +146,8 @@
     // The preview opens on its supported matchup; the classic default stays
     // polar bear vs elephant. Both variants may still change fighters.
     selection: [0, params.get('art') === '3d' ? CHARACTERS.findIndex(c => c.id === 'jelly') : 1],
-    palettes: [0, 0],     // palette index per side
-    arena: Arenas.get(params.get('arena')),  // match setting; persists through mode changes and rematches
+    palettes: [0, 1],     // 1P Color A, 2P Color B on a fresh selection screen
+    arenaChoice: Arenas.choiceId(params.get('arena')), // persists; a random choice draws once per match
     seed: params.has('seed') ? Number(params.get('seed')) >>> 0 : null, // reproducible battles (QA)
     speedOverride: [1, 1.5, 2, 4].includes(Number(params.get('speed'))) ? Number(params.get('speed')) : null,
   };
@@ -302,11 +302,32 @@
 
   function wireSelectScreen() {
     if (useReleaseArt) {
-      const select = $('#arenaSelect');
-      select.replaceChildren(...Arenas.list.map(({ id, label }) => new Option(label, id)));
-      select.value = app.arena.id;
-      select.onchange = () => { app.arena = Arenas.get(select.value); };
-      $('#arenaChooser').hidden = false;
+      const chooser = $('#arenaChooser');
+      const options = $('.arena-options', chooser);
+      const hint = $('#arenaRandomHint', chooser);
+      hint.textContent = `每場對戰及再戰都會從下方 ${Arenas.list.length} 個場景隨機抽選 1 個。`;
+      options.replaceChildren(...[{ id: Arenas.randomId, label: '隨機場景' }, ...Arenas.list].map(({ id, label }) => {
+        const option = document.createElement('label');
+        const radio = document.createElement('input');
+        const caption = document.createElement('span');
+        option.className = 'arena-option';
+        radio.type = 'radio';
+        radio.name = 'arena';
+        radio.value = id;
+        radio.checked = id === app.arenaChoice;
+        if (id === Arenas.randomId) radio.setAttribute('aria-describedby', hint.id);
+        caption.textContent = label;
+        option.append(radio, caption);
+        return option;
+      }));
+      options.addEventListener('change', (e) => {
+        const radio = e.target;
+        if (radio.matches('input[name="arena"]:checked')) {
+          app.arenaChoice = Arenas.choiceId(radio.value);
+          Audio.sfx('ui-select');
+        }
+      });
+      chooser.hidden = false;
     }
     [1, 2].forEach((player) => {
       const roster = $(`#p${player}Roster`);
@@ -675,7 +696,7 @@
     closeAllOverlays();
     const c1 = CHARACTERS[app.selection[0]];
     const c2 = CHARACTERS[app.selection[1]];
-    if (c1.id === c2.id && app.palettes[0] === app.palettes[1]) app.palettes[1] = 1 - app.palettes[0];
+    resolvePaletteClash(1);
     if (battle) battle.dispose();
     clearFighterVisualState();
     const rng = app.seed !== null ? Engine.createRng(app.seed) : Math.random;
@@ -687,8 +708,12 @@
     particles.setAmbient(true);
     const session = battle;
     const usePilot = useReleaseArt && PilotArt?.enabled(session.state.fighters);
-    // Commit the preparation state before the battle screen becomes visible.
-    if (usePilot) dom.stage.dataset.pilot = 'loading';
+    const arena = usePilot ? Arenas.resolve(app.arenaChoice) : null;
+    // Commit the actual draw and the preparation state before making the battle visible.
+    if (arena) {
+      dom.stage.dataset.arena = arena.id;
+      dom.stage.dataset.pilot = 'loading';
+    }
     dom.selectScreen.classList.remove('active');
     dom.battleScreen.classList.add('active');
     dom.battleLog.innerHTML = '<h3>BATTLE LOG</h3>';
@@ -698,13 +723,13 @@
 
     session.busy = true;
     dom.phaseLabel.textContent = 'INTRO';
-    dom.commandTitle.textContent = app.arena.label;
+    dom.commandTitle.textContent = arena.label;
     dom.commandSub.textContent = '準備入場…';
     dom.waiting.classList.remove('show');
     dom.cmdGrid.replaceChildren();
     session.art = PilotArt.activate(dom.stage, dom.fighters, session.state.fighters, {
       audio: Audio,
-      arena: app.arena,
+      arena,
       skipIntro: () => reducedMotion() || Settings.get('quality') === 'low' || params.get('intro') === '0',
     });
     const enter = (ok) => {
@@ -925,7 +950,7 @@
         if (Engine.isSuperSkill(s)) await showCutin(side, s);
         await playFiveFrameAction(side, s, true);
         updateHUD();
-        log(`${me.character.name} 使用「${s.name}」，獲得 ${outcome.shieldGain} 點護盾${me.character.id === 'jelly' ? '（無骨重甲強化）' : ''}。`, 'buff');
+        log(`${me.character.name} 使用「${s.name}」，獲得 ${outcome.shieldGain} 點護盾。`, 'buff');
         fxText(side, `+${outcome.shieldGain} 🛡`, 'shield');
         return;
       case 'heal':
@@ -976,6 +1001,9 @@
     const winner = Engine.checkWinner(state);
     if (winner === null) return false;
     if (battle.koShown) return true;
+    // Capture the colors of the finished battle before rematch or selection
+    // can dispose its state. Either button keeps these until the next edit.
+    app.palettes = state.fighters.map(fighter => fighter.paletteIndex);
     battle.koShown = true;
     battle.busy = true;
     const loser = 1 - winner;
@@ -1131,7 +1159,7 @@
   function onKeyDown(e) {
     if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return;
     trapFocus(e);
-    const typing = e.target.matches && e.target.matches('input[type="range"], input[type="text"], select');
+    const typing = e.target.matches && e.target.matches('input[type="range"], input[type="text"], input[name="arena"], select');
     const open = topOverlay();
     if (e.key === 'Escape') {
       if (open && open !== dom.resultOverlay) { e.preventDefault(); closeOverlay(open); }

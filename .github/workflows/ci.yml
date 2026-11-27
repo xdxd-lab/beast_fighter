@@ -42,6 +42,16 @@ jobs:
         env:
           CI: 'true'
         run: python3 scripts/qa/pilot_view_test.py
+      - name: Check arena selection and per-match lazy loading
+        env:
+          CI: 'true'
+        run: python3 scripts/qa/arena_picker_test.py
+      - name: Check mobile character detail, palette and shield behavior
+        env:
+          CI: 'true'
+        run: |
+          python3 scripts/qa/select_detail_test.py
+          python3 scripts/qa/jelly_shields_test.py
       - name: Upload screenshots
         if: always()
         uses: actions/upload-artifact@v4
