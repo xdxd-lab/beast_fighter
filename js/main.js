@@ -15,9 +15,13 @@
   const Settings = BB.Settings;
   const PilotArt = BB.PilotArt;
   const ReleaseArt = BB.ReleaseArt;
+  const Arenas = BB.Arenas;
 
   /** Stereo position of each side for spatialised sound. */
   const pan = (side) => (side === 0 ? -0.45 : 0.45);
+  // All roster artwork is authored with the right-facing side as canonical.
+  // Facing belongs to character art, not to player slots or the camera.
+  const facing = (side) => side === 0 ? 'right' : 'left';
 
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
@@ -143,6 +147,7 @@
     // polar bear vs elephant. Both variants may still change fighters.
     selection: [0, params.get('art') === '3d' ? CHARACTERS.findIndex(c => c.id === 'jelly') : 1],
     palettes: [0, 0],     // palette index per side
+    arena: Arenas.get(params.get('arena')),  // match setting; persists through mode changes and rematches
     seed: params.has('seed') ? Number(params.get('seed')) >>> 0 : null, // reproducible battles (QA)
     speedOverride: [1, 1.5, 2, 4].includes(Number(params.get('speed'))) ? Number(params.get('speed')) : null,
   };
@@ -171,11 +176,24 @@
   const STAT_MAX = ['hp', 'mp', 'atk', 'def', 'spd'].reduce((o, k) => ({ ...o, [k]: Math.max(...CHARACTERS.map((c) => c[k])) }), {});
 
   /* ================================================================== select */
-  // Upgrade just the graphic after decode, never replace the focused button.
+  let portraitMode = useReleaseArt && ReleaseArt ? 'loading' : 'classic';
+  const pendingPortraits = new Map();
+
+  // The control stays interactive while its optional artwork is prepared.
+  // Replace only the graphic, never the focused (or selected) card itself.
   function upgradePortrait(box, c, palette) {
-    if (!useReleaseArt || !box) return;
-    const url = ReleaseArt?.portrait(c,palette);
-    if (!url || box.querySelector('.roster-render')) return;
+    if (!box || box.querySelector('.roster-render')) return;
+    if (portraitMode === 'loading') {
+      box.dataset.portrait = 'loading';
+      pendingPortraits.set(box, [c, palette]);
+      return;
+    }
+    const url = portraitMode === 'ready' && ReleaseArt.portrait(c, palette);
+    if (!url) {
+      delete box.dataset.portrait;
+      return;
+    }
+    box.dataset.portrait = 'loading';
     const image = new Image();
     image.className = 'roster-render';
     image.alt = '';
@@ -183,24 +201,38 @@
     image.dataset.character = c.id;
     image.dataset.palette = palette ? 'b' : 'a';
     const existing = box.firstElementChild;
-    image.onload = () => {
-      if (existing?.parentElement === box) box.replaceChildren(image);
+    const finish = (ok) => {
+      if (existing?.parentElement !== box) return;
+      if (ok && image.naturalWidth) box.replaceChildren(image);
+      delete box.dataset.portrait;
     };
-    image.src = url;
-  }
-
-  function upgradeRoster() {
-    for (const side of [1,2]) {
-      const p = app.palettes[side-1];
-      $$(`#p${side}Roster .char-card .portrait`).forEach((box,i) => upgradePortrait(box,CHARACTERS[i],p));
-      upgradePortrait($(`#p${side}Detail .big-portrait`),CHARACTERS[app.selection[side-1]],p);
+    if (typeof image.decode === 'function') {
+      image.src = url;
+      void image.decode().then(() => finish(true), () => finish(false));
+    } else {
+      image.onload = () => finish(true);
+      image.onerror = () => finish(false);
+      image.src = url;
     }
   }
+
+  async function preparePortraits() {
+    let timer;
+    const limit = new Promise(resolve => { timer = setTimeout(() => resolve(false), 6500); });
+    const loaded = await Promise.race([ReleaseArt.loadPortraits(), limit]).catch(() => false);
+    clearTimeout(timer);
+    portraitMode = loaded ? 'ready' : 'classic';
+    for (const [box, [character, palette]] of pendingPortraits) {
+      if (box.isConnected) upgradePortrait(box, character, palette);
+    }
+    pendingPortraits.clear();
+  }
+
   /** Builds the roster cards for one side (only needed when that side's palette changes). */
   function renderRoster(player) {
     const box = $(`#p${player}Roster`);
     const pi = app.palettes[player - 1];
-    box.innerHTML = CHARACTERS.map((c, i) => `<button class="char-card" type="button" role="radio" data-index="${i}" aria-label="${c.name}・${c.animal}（${c.job}）"><div class="portrait">${fighterSVG(c, pi)}</div><h3>${c.name}・${c.animal}</h3><small>${c.job}</small></button>`).join('');
+    box.innerHTML = CHARACTERS.map((c, i) => `<button class="char-card" type="button" role="radio" data-index="${i}" aria-label="${c.name}・${c.animal}（${c.job}）"><div class="portrait character-art" data-facing="${facing(player - 1)}">${fighterSVG(c, pi)}</div><h3>${c.name}・${c.animal}</h3><small>${c.job}</small></button>`).join('');
     syncRosterSelection(player);
     $$('.portrait', box).forEach((node,i) => upgradePortrait(node,CHARACTERS[i],pi));
   }
@@ -224,7 +256,7 @@
     const pi = app.palettes[player - 1];
     const box = $(`#p${player}Detail`);
     const skills = c.skills.map((s) => `<li><span class="tag t-${s.type}">${TYPE_LABEL[s.type] || s.type}</span><b>${s.name}</b>${s.cost ? `<span class="cost-pill">${s.cost} MP</span>` : '<span class="cost-pill free">免費</span>'}<small>${s.desc}</small></li>`).join('');
-    box.innerHTML = `<div class="big-portrait">${fighterSVG(c, pi)}</div><div class="detail"><div class="job">${c.job}</div><h3>${c.name}・${c.animal}</h3><div class="passive">${c.passive}</div><div class="stats">${statBar('HP', c.hp, 'hp')}${statBar('MP', c.mp, 'mp')}${statBar('ATK', c.atk, 'atk')}${statBar('DEF', c.def, 'def')}${statBar('SPD', c.spd, 'spd')}</div><ul class="skill-list">${skills}</ul><div class="palette-row"><span class="palette-label">異色造型</span><button class="palette ${pi === 0 ? 'active' : ''}" type="button" data-p="0" aria-pressed="${pi === 0}">COLOR A</button><button class="palette ${pi === 1 ? 'active' : ''}" type="button" data-p="1" aria-pressed="${pi === 1}">COLOR B</button></div></div>`;
+    box.innerHTML = `<div class="big-portrait character-art" data-facing="${facing(player - 1)}">${fighterSVG(c, pi)}</div><div class="detail"><div class="job">${c.job}</div><h3>${c.name}・${c.animal}</h3><div class="passive">${c.passive}</div><div class="stats">${statBar('HP', c.hp, 'hp')}${statBar('MP', c.mp, 'mp')}${statBar('ATK', c.atk, 'atk')}${statBar('DEF', c.def, 'def')}${statBar('SPD', c.spd, 'spd')}</div><ul class="skill-list">${skills}</ul><div class="palette-row"><span class="palette-label">異色造型</span><button class="palette ${pi === 0 ? 'active' : ''}" type="button" data-p="0" aria-pressed="${pi === 0}">COLOR A</button><button class="palette ${pi === 1 ? 'active' : ''}" type="button" data-p="1" aria-pressed="${pi === 1}">COLOR B</button></div></div>`;
     upgradePortrait($('.big-portrait', box), c, pi);
   }
 
@@ -269,6 +301,13 @@
   }
 
   function wireSelectScreen() {
+    if (useReleaseArt) {
+      const select = $('#arenaSelect');
+      select.replaceChildren(...Arenas.list.map(({ id, label }) => new Option(label, id)));
+      select.value = app.arena.id;
+      select.onchange = () => { app.arena = Arenas.get(select.value); };
+      $('#arenaChooser').hidden = false;
+    }
     [1, 2].forEach((player) => {
       const roster = $(`#p${player}Roster`);
       roster.addEventListener('click', (e) => {
@@ -374,7 +413,7 @@
 
   /** Fighter centre in stage units (1000×520), measured from the live layout. */
   function fighterAnchor(side) {
-    const svg = dom.fighters[side].querySelector('.pilot-fighter:not([hidden])') || dom.fighters[side].querySelector('svg');
+    const svg = dom.fighters[side].querySelector('.pilot-fighter:not([hidden])') || dom.fighters[side].querySelector('.fighter-figure > svg');
     const s = dom.stage.getBoundingClientRect();
     if (!svg || !s.width) return { x: side === 0 ? 270 : 730, y: 300, ground: 440 };
     const r = svg.getBoundingClientRect();
@@ -395,7 +434,7 @@
     setTimeout(() => el.remove(), 760);
   }
 
-  const sideBaseTransform = (side, x = 0, y = 0) => `translate(${x}px,${y}px) scaleX(${side === 0 ? 1 : -1})`;
+  const motionTransform = (x, y) => `translate(${x}px,${y}px)`;
 
   const FX_ACCENTS = [
     [['ember', 'fireball', 'meteor'], 'rgba(255,133,62,.48)'],
@@ -460,7 +499,7 @@
     const ghost = dom.fighters[side].cloneNode(true);
     ghost.id = '';
     ghost.classList.add('afterimage');
-    ghost.style.transform = sideBaseTransform(side, dx, dy);
+    ghost.style.transform = motionTransform(dx, dy);
     dom.stage.appendChild(ghost);
     setTimeout(() => ghost.remove(), 360);
   }
@@ -471,7 +510,7 @@
     const dir = side === 0 ? 1 : -1;
     const fx = s.fx || '';
     const type = s.type || '';
-    const at = (x, y, offset) => (offset === undefined ? { transform: sideBaseTransform(side, x, y) } : { offset, transform: sideBaseTransform(side, x, y) });
+    const at = (x, y, offset) => (offset === undefined ? { transform: motionTransform(x, y) } : { offset, transform: motionTransform(x, y) });
     let kf;
     if (['guard', 'shield', 'heal', 'focus'].includes(type)) {
       kf = [at(0, 0), at(-dir * 8, 6, 0.28), at(dir * 8, -12, 0.62), at(0, 0)];
@@ -490,10 +529,10 @@
     if (!actor.animate) return;
     const push = attackerSide === 0 ? 22 : -22;
     actor.animate([
-      { transform: sideBaseTransform(targetSide, 0, 0) },
-      { offset: 0.28, transform: sideBaseTransform(targetSide, push, -5) },
-      { offset: 0.58, transform: sideBaseTransform(targetSide, push * 0.45, 1) },
-      { transform: sideBaseTransform(targetSide, 0, 0) },
+      { transform: motionTransform(0, 0) },
+      { offset: 0.28, transform: motionTransform(push, -5) },
+      { offset: 0.58, transform: motionTransform(push * 0.45, 1) },
+      { transform: motionTransform(0, 0) },
     ], { duration: 320, easing: 'cubic-bezier(.2,.82,.22,1)' });
   }
 
@@ -513,7 +552,7 @@
     spawnStageFlash(fxColorForSkill(s), side === 0 ? '24% 48%' : '76% 48%');
     const el = document.createElement('div');
     el.className = `cinematic-cutin ${side === 1 ? 'right' : ''}`;
-    el.innerHTML = `<div class="cutin-card"><div class="cutin-art">${fighterSVG(fighter.character, fighter.paletteIndex)}</div><div class="cutin-meta"><div class="cutin-ribbon">${cutinRoleLabel(s)}</div><div class="cutin-name">${s.name}</div><div class="cutin-sub">${fighter.character.name}・${fighter.character.job}</div><div class="cutin-desc">${s.desc}</div></div></div>`;
+    el.innerHTML = `<div class="cutin-card"><div class="cutin-art character-art" data-facing="${facing(side)}">${fighterSVG(fighter.character, fighter.paletteIndex)}</div><div class="cutin-meta"><div class="cutin-ribbon">${cutinRoleLabel(s)}</div><div class="cutin-name">${s.name}</div><div class="cutin-sub">${fighter.character.name}・${fighter.character.job}</div><div class="cutin-desc">${s.desc}</div></div></div>`;
     upgradePortrait($('.cutin-art',el), fighter.character, fighter.paletteIndex);
     dom.stage.appendChild(el);
     requestAnimationFrame(() => el.classList.add('show'));
@@ -646,28 +685,35 @@
     Audio.music('battle');
     particles.clear();
     particles.setAmbient(true);
+    const session = battle;
+    const usePilot = useReleaseArt && PilotArt?.enabled(session.state.fighters);
+    // Commit the preparation state before the battle screen becomes visible.
+    if (usePilot) dom.stage.dataset.pilot = 'loading';
     dom.selectScreen.classList.remove('active');
     dom.battleScreen.classList.add('active');
     dom.battleLog.innerHTML = '<h3>BATTLE LOG</h3>';
     setGameState('battle', { mode: app.mode });
-    const session = battle;
-    const usePilot = useReleaseArt && PilotArt?.enabled(session.state.fighters);
     renderBattle(!usePilot);
     if (!usePilot) return beginRound();
 
     session.busy = true;
     dom.phaseLabel.textContent = 'INTRO';
-    dom.commandTitle.textContent = '雪山擂台';
+    dom.commandTitle.textContent = app.arena.label;
     dom.commandSub.textContent = '準備入場…';
     dom.waiting.classList.remove('show');
     dom.cmdGrid.replaceChildren();
     session.art = PilotArt.activate(dom.stage, dom.fighters, session.state.fighters, {
       audio: Audio,
+      arena: app.arena,
       skipIntro: () => reducedMotion() || Settings.get('quality') === 'low' || params.get('intro') === '0',
     });
     const enter = (ok) => {
       if (!session.alive || session !== battle) return;
-      if (!ok) { session.art.dispose(); session.art = null; }
+      if (!ok) {
+        session.art.dispose();
+        session.art = null;
+        log('3D 美術未能載入，這場改用經典畫面。', 'sys');
+      }
       announceRound(1);
       beginRound();
     };
@@ -679,7 +725,8 @@
     fighters.forEach((f, i) => {
       const el = dom.fighters[i];
       el.dataset.char = f.character.id;
-      el.innerHTML = `<div class="shield-bubble" aria-hidden="true"></div>${fighterSVG(f.character, f.paletteIndex)}${GUARD_BARRIER}<div class="expression"><i></i><i></i><b></b></div><div class="pose-icon"></div><div class="nameplate">${f.character.name}・${f.character.job}</div>`;
+      el.dataset.facing = facing(i);
+      el.innerHTML = `<div class="shield-bubble" aria-hidden="true"></div><div class="fighter-figure">${fighterSVG(f.character, f.paletteIndex)}</div>${GUARD_BARRIER}<div class="expression"><i></i><i></i><b></b></div><div class="pose-icon"></div><div class="nameplate">${f.character.name}・${f.character.job}</div>`;
       setPose(i, 'idle');
       const h = dom.hud[i];
       h.name.textContent = `${sideLabel(i)} ${f.character.name} / ${f.character.job}`;
@@ -963,8 +1010,11 @@
     title.textContent = `${sideLabel(winner)} WIN!`;
     title.className = winner === 0 ? 'p1-win' : 'p2-win';
     $('#resultText').textContent = `${w.character.name}・${w.character.job} 擊敗 ${l.character.name}，共進行 ${state.round} 回合，剩餘 HP ${w.hp} / ${w.maxHp}。`;
-    $('#resultPortrait').innerHTML = fighterSVG(w.character, w.paletteIndex);
-    upgradePortrait($('#resultPortrait'), w.character, w.paletteIndex);
+    const portrait = $('#resultPortrait');
+    portrait.classList.add('character-art');
+    portrait.dataset.facing = facing(winner);
+    portrait.innerHTML = fighterSVG(w.character, w.paletteIndex);
+    upgradePortrait(portrait, w.character, w.paletteIndex);
     const head = `<tr><th scope="col"></th><th scope="col" class="p1c">${sideLabel(0)} ${state.fighters[0].character.name}</th><th scope="col" class="p2c">${sideLabel(1)} ${state.fighters[1].character.name}</th></tr>`;
     const body = RESULT_ROWS.map(([label, key]) => `<tr><th scope="row">${label}</th><td class="${key !== 'misses' && s0[key] > s1[key] ? 'lead' : ''}">${s0[key]}</td><td class="${key !== 'misses' && s1[key] > s0[key] ? 'lead' : ''}">${s1[key]}</td></tr>`).join('');
     $('#resultStats').innerHTML = `<table><thead>${head}</thead><tbody>${body}</tbody></table>`;
@@ -1081,7 +1131,7 @@
   function onKeyDown(e) {
     if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return;
     trapFocus(e);
-    const typing = e.target.matches && e.target.matches('input[type="range"], input[type="text"]');
+    const typing = e.target.matches && e.target.matches('input[type="range"], input[type="text"], select');
     const open = topOverlay();
     if (e.key === 'Escape') {
       if (open && open !== dom.resultOverlay) { e.preventDefault(); closeOverlay(open); }
@@ -1167,7 +1217,7 @@
 
   setMode(app.mode);
   renderAllSelect();
-  if (useReleaseArt) void ReleaseArt?.loadPortraits().then(upgradeRoster);
+  if (portraitMode === 'loading') void preparePortraits();
   setGameState('select', { art: 'classic' });
   if (params.get('autostart') === '1') startBattle();
 

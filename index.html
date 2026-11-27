@@ -48,6 +48,10 @@
         <button class="mode" type="button" data-mode="local" aria-pressed="false">1P vs 2P 雙人同機</button>
         <button class="mode" type="button" data-mode="demo" aria-pressed="false">CPU 觀戰</button>
       </div>
+      <div class="arena-chooser" id="arenaChooser" hidden>
+        <label for="arenaSelect">對戰場景</label>
+        <select id="arenaSelect" name="arena"></select>
+      </div>
       <div class="setup-grid">
         <div class="panel">
           <div class="panel-head"><h2>選擇左側角色</h2><div class="panel-tools"><button class="mini" type="button" data-random="1" aria-label="左側隨機選角">🎲 隨機</button><span class="badge p1b" id="p1Badge">1P / CYAN</span></div></div>
@@ -185,6 +189,7 @@
 <script src="js/fx/particles.js"></script>
 <script src="js/fx/touch.js"></script>
 <script src="js/render/release-art.js"></script>
+<script src="js/render/arenas.js"></script>
 <script src="js/render/pilot.js"></script>
 <script src="js/main.js"></script>
 </body>

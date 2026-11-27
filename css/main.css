@@ -533,10 +533,26 @@ main {
 
 .fighter.right {
   right: 7%;
-  transform: scaleX(-1);
 }
 
-.fighter > svg {
+/* One facing transform on the artwork, never on the fighter slot or text.
+   The classic wrapper leaves pose animation transforms on the inner SVG. */
+[data-facing="left"] { --art-facing: -1; }
+[data-facing="right"] { --art-facing: 1; }
+.fighter-figure {
+  display: grid;
+  place-items: end center;
+  transform: scaleX(var(--art-facing, 1));
+}
+.character-art > :is(svg,.roster-render) {
+  transform: scaleX(var(--art-facing, 1));
+}
+.character-art[data-portrait="loading"] {
+  background: radial-gradient(ellipse at 50% 44%, #293a51, #132136 72%);
+}
+.character-art[data-portrait="loading"] > svg { visibility: hidden; }
+
+.fighter > .fighter-figure > svg {
   width: 280px;
   height: 280px;
   /* Perf: one shadow pass instead of two, and only transform is promoted. */
@@ -545,10 +561,6 @@ main {
   transform-box: fill-box;
   will-change: transform;
   image-rendering: auto;
-}
-
-.fighter.right .nameplate {
-  transform: scaleX(-1);
 }
 
 .nameplate {
@@ -569,199 +581,199 @@ main {
   --poseGlow: rgba(255,225,120,.75);
 }
 
-.fighter > svg {
+.fighter > .fighter-figure > svg {
   transition: transform .16s cubic-bezier(.2,.8,.22,1),filter .16s cubic-bezier(.2,.8,.22,1),opacity .18s ease;
 }
 
-.fighter.pose-idle > svg {
+.fighter.pose-idle > .fighter-figure > svg {
   animation: idleBase 1.65s ease-in-out infinite;
 }
 
-.fighter[data-char="bear"].pose-idle > svg {
+.fighter[data-char="bear"].pose-idle > .fighter-figure > svg {
   animation: bearIdle 1.55s ease-in-out infinite;
 }
 
-.fighter[data-char="elephant"].pose-idle > svg {
+.fighter[data-char="elephant"].pose-idle > .fighter-figure > svg {
   animation: elephantIdle 1.9s ease-in-out infinite;
 }
 
-.fighter[data-char="panda"].pose-idle > svg {
+.fighter[data-char="panda"].pose-idle > .fighter-figure > svg {
   animation: pandaIdle 1.45s ease-in-out infinite;
 }
 
-.fighter[data-char="hummingbird"].pose-idle > svg {
+.fighter[data-char="hummingbird"].pose-idle > .fighter-figure > svg {
   animation: hummingbirdIdle .34s ease-in-out infinite;
 }
 
-.fighter[data-char="orca"].pose-idle > svg {
+.fighter[data-char="orca"].pose-idle > .fighter-figure > svg {
   animation: orcaIdle 1.35s ease-in-out infinite;
 }
 
-.fighter[data-char="jelly"].pose-idle > svg {
+.fighter[data-char="jelly"].pose-idle > .fighter-figure > svg {
   animation: jellyIdle 1.7s ease-in-out infinite;
 }
 
-.fighter.pose-ready > svg {
+.fighter.pose-ready > .fighter-figure > svg {
   transform: translateY(7px) scale(.97);
 }
 
-.fighter.pose-charge > svg {
+.fighter.pose-charge > .fighter-figure > svg {
   filter: drop-shadow(0 0 25px var(--poseGlow));
   transform: translateY(-5px) scale(1.07);
 }
 
-.fighter.pose-release > svg {
+.fighter.pose-release > .fighter-figure > svg {
   transform: translateX(34px) rotate(-4deg) scale(1.09);
   filter: drop-shadow(0 0 26px var(--poseGlow));
 }
 
-.fighter.pose-strike > svg {
+.fighter.pose-strike > .fighter-figure > svg {
   transform: translateX(54px) translateY(-8px) scale(1.1);
   filter: brightness(1.16) drop-shadow(0 0 28px var(--poseGlow));
 }
 
-.fighter.pose-recover > svg {
+.fighter.pose-recover > .fighter-figure > svg {
   transform: translateY(3px) scale(1.01);
 }
 
-.fighter.pose-hit > svg {
+.fighter.pose-hit > .fighter-figure > svg {
   animation: hitV4 .34s ease;
 }
 
-.fighter.pose-guard > svg {
+.fighter.pose-guard > .fighter-figure > svg {
   animation: guardV4 .58s ease;
 }
 
-.fighter.pose-ko > svg {
+.fighter.pose-ko > .fighter-figure > svg {
   animation: koV4 .92s cubic-bezier(.22,.9,.32,1) forwards;
 }
 
-.fighter.pose-victory > svg {
+.fighter.pose-victory > .fighter-figure > svg {
   animation: victoryBase .82s ease-in-out infinite alternate;
 }
 
-.fighter.low-hp.pose-idle > svg {
+.fighter.low-hp.pose-idle > .fighter-figure > svg {
   animation-duration: .72s;
   filter: drop-shadow(0 0 11px rgba(255,90,90,.42));
 }
 
-.fighter[data-char="bear"].pose-charge > svg {
+.fighter[data-char="bear"].pose-charge > .fighter-figure > svg {
   transform: translateY(-14px) rotate(3deg) scale(1.09);
   --poseGlow: rgba(255,100,40,.9);
 }
 
-.fighter[data-char="bear"].pose-release > svg {
+.fighter[data-char="bear"].pose-release > .fighter-figure > svg {
   transform: translateX(24px) translateY(-12px) rotate(-8deg) scale(1.11);
 }
 
-.fighter[data-char="bear"].pose-victory > svg {
+.fighter[data-char="bear"].pose-victory > .fighter-figure > svg {
   animation: bearVictory .75s ease-in-out infinite alternate;
 }
 
-.fighter[data-char="elephant"].pose-ready > svg {
+.fighter[data-char="elephant"].pose-ready > .fighter-figure > svg {
   transform: translateY(10px) rotate(-2deg) scale(.98);
 }
 
-.fighter[data-char="elephant"].pose-charge > svg {
+.fighter[data-char="elephant"].pose-charge > .fighter-figure > svg {
   transform: translateX(-10px) scale(1.04);
   --poseGlow: rgba(85,205,255,.9);
 }
 
-.fighter[data-char="elephant"].pose-release > svg {
+.fighter[data-char="elephant"].pose-release > .fighter-figure > svg {
   transform: translateX(18px) rotate(5deg) scale(1.06);
 }
 
-.fighter[data-char="elephant"].pose-strike > svg {
+.fighter[data-char="elephant"].pose-strike > .fighter-figure > svg {
   transform: translateX(31px) rotate(7deg) scale(1.07);
 }
 
-.fighter[data-char="elephant"].pose-victory > svg {
+.fighter[data-char="elephant"].pose-victory > .fighter-figure > svg {
   animation: elephantVictory 1s ease-in-out infinite alternate;
 }
 
-.fighter[data-char="panda"].pose-ready > svg {
+.fighter[data-char="panda"].pose-ready > .fighter-figure > svg {
   transform: translateY(8px) rotate(-6deg) scale(.96);
 }
 
-.fighter[data-char="panda"].pose-charge > svg {
+.fighter[data-char="panda"].pose-charge > .fighter-figure > svg {
   transform: translateX(-18px) skewX(-7deg) scale(1.02);
   --poseGlow: rgba(138,226,111,.95);
 }
 
-.fighter[data-char="panda"].pose-release > svg {
+.fighter[data-char="panda"].pose-release > .fighter-figure > svg {
   animation: pandaDash .18s steps(2,end) infinite alternate;
 }
 
-.fighter[data-char="panda"].pose-strike > svg {
+.fighter[data-char="panda"].pose-strike > .fighter-figure > svg {
   transform: translateX(92px) skewX(-12deg) scale(1.04);
   filter: drop-shadow(-26px 0 0 rgba(133,230,111,.24)) drop-shadow(-52px 0 0 rgba(133,230,111,.12));
 }
 
-.fighter[data-char="panda"].pose-victory > svg {
+.fighter[data-char="panda"].pose-victory > .fighter-figure > svg {
   animation: pandaVictory 1.5s ease-in-out infinite alternate;
 }
 
-.fighter[data-char="hummingbird"].pose-ready > svg {
+.fighter[data-char="hummingbird"].pose-ready > .fighter-figure > svg {
   transform: translateY(-8px) rotate(7deg) scale(.94);
 }
 
-.fighter[data-char="hummingbird"].pose-charge > svg {
+.fighter[data-char="hummingbird"].pose-charge > .fighter-figure > svg {
   transform: translateY(-24px) rotate(-12deg) scale(1.08);
   --poseGlow: rgba(255,206,78,.95);
 }
 
-.fighter[data-char="hummingbird"].pose-release > svg {
+.fighter[data-char="hummingbird"].pose-release > .fighter-figure > svg {
   transform: translateX(34px) translateY(-30px) rotate(13deg) scale(1.12);
 }
 
-.fighter[data-char="hummingbird"].pose-strike > svg {
+.fighter[data-char="hummingbird"].pose-strike > .fighter-figure > svg {
   animation: hummingbirdSmash .16s ease both;
 }
 
-.fighter[data-char="hummingbird"].pose-victory > svg {
+.fighter[data-char="hummingbird"].pose-victory > .fighter-figure > svg {
   animation: hummingbirdVictory .48s ease-in-out infinite alternate;
 }
 
-.fighter[data-char="orca"].pose-ready > svg {
+.fighter[data-char="orca"].pose-ready > .fighter-figure > svg {
   transform: rotate(-4deg) translateY(6px);
 }
 
-.fighter[data-char="orca"].pose-charge > svg {
+.fighter[data-char="orca"].pose-charge > .fighter-figure > svg {
   transform: translateY(-10px) rotate(5deg) scale(1.05);
   --poseGlow: rgba(111,206,255,.95);
 }
 
-.fighter[data-char="orca"].pose-release > svg {
+.fighter[data-char="orca"].pose-release > .fighter-figure > svg {
   transform: translateX(18px) rotate(-7deg) scale(1.06);
 }
 
-.fighter[data-char="orca"].pose-strike > svg {
+.fighter[data-char="orca"].pose-strike > .fighter-figure > svg {
   transform: translateX(30px) rotate(7deg) scale(1.08);
 }
 
-.fighter[data-char="orca"].pose-victory > svg {
+.fighter[data-char="orca"].pose-victory > .fighter-figure > svg {
   animation: orcaVictory .75s ease-in-out infinite alternate;
 }
 
-.fighter[data-char="jelly"].pose-ready > svg {
+.fighter[data-char="jelly"].pose-ready > .fighter-figure > svg {
   transform: translateY(9px) scale(.96);
 }
 
-.fighter[data-char="jelly"].pose-charge > svg {
+.fighter[data-char="jelly"].pose-charge > .fighter-figure > svg {
   transform: translateY(-12px) scale(1.1);
   --poseGlow: rgba(123,220,255,.95);
 }
 
-.fighter[data-char="jelly"].pose-release > svg {
+.fighter[data-char="jelly"].pose-release > .fighter-figure > svg {
   transform: translateX(18px) translateY(-10px) scale(1.09);
 }
 
-.fighter[data-char="jelly"].pose-strike > svg {
+.fighter[data-char="jelly"].pose-strike > .fighter-figure > svg {
   transform: translateX(28px) scale(1.12);
   filter: brightness(1.18) drop-shadow(0 0 30px rgba(120,220,255,.9));
 }
 
-.fighter[data-char="jelly"].pose-victory > svg {
+.fighter[data-char="jelly"].pose-victory > .fighter-figure > svg {
   animation: jellyVictory 1.05s ease-in-out infinite alternate;
 }
 
@@ -772,7 +784,7 @@ main {
   top: 58px;
   width: 72px;
   height: 43px;
-  transform: translateX(-50%);
+  transform: translateX(-50%) scaleX(var(--art-facing, 1));
   pointer-events: none;
   opacity: 0;
   transition: opacity .1s ease;
@@ -1957,7 +1969,7 @@ main {
     height: 250px;
     bottom: 64px;
   }
-  .fighter > svg {
+  .fighter > .fighter-figure > svg {
     width: 210px;
     height: 210px;
   }
@@ -2045,7 +2057,7 @@ main {
     height: 188px;
     bottom: 55px;
   }
-  .fighter > svg {
+  .fighter > .fighter-figure > svg {
     width: 156px;
     height: 156px;
   }
@@ -2166,7 +2178,7 @@ main {
   50% { transform: translateX(-50%) scale(1.025, .975); }
 }
 
-/* Hexagonal guard barrier in front of the fighter (mirrored for P2 by the parent). */
+/* Directional guard position follows the opponent; the texture itself is neutral. */
 .guard-barrier {
   position: absolute;
   height: auto;
@@ -2180,6 +2192,11 @@ main {
   transform: scale(.7) rotate(-6deg);
   filter: drop-shadow(0 0 10px rgba(140,220,255,.6));
   transition: opacity .2s ease, transform .3s cubic-bezier(.2,.9,.3,1.4);
+}
+
+.fighter[data-facing="left"] > .guard-barrier {
+  left: auto;
+  right: 58%;
 }
 
 .guard-barrier svg {
@@ -2262,7 +2279,7 @@ main {
 }
 
 /* ---------- Reduced motion ---------- */
-[data-motion="reduced"] .fighter > svg,
+[data-motion="reduced"] .fighter > .fighter-figure > svg,
 [data-motion="reduced"] .fighter.has-shield .shield-bubble,
 [data-motion="reduced"] .stage.danger-left .danger-vignette.left,
 [data-motion="reduced"] .stage.danger-right .danger-vignette.right,
@@ -2384,7 +2401,7 @@ kbd {
 }
 
 .char-card:hover .portrait svg {
-  transform: translateY(-3px) scale(1.04);
+  transform: translateY(-3px) scale(1.04) scaleX(var(--art-facing, 1));
 }
 
 .portrait svg {
@@ -3045,11 +3062,24 @@ kbd {
   }
 }
 
-/* Pilot: pre-rendered landscape and transparent layers; classic art stays default. */
-.stage[data-pilot="ready"] { background: #132338; }
-.stage[data-pilot="ready"] > :is(.moon,.city,.floor,.versus),
-.stage[data-pilot="ready"]::before,
-.stage[data-pilot="ready"]::after { display: none; }
+/* Pilot: preparing and ready both reserve the final stage, without exposing
+   the classic skyline or SVGs until an intentional classic fallback. */
+.stage:is([data-pilot="loading"],[data-pilot="ready"]) { background: #132338; }
+.stage:is([data-pilot="loading"],[data-pilot="ready"]) > :is(.moon,.city,.floor,.versus),
+.stage:is([data-pilot="loading"],[data-pilot="ready"])::before,
+.stage:is([data-pilot="loading"],[data-pilot="ready"])::after { display: none; }
+.stage[data-pilot="loading"] > :is(.fighter,.stage-banner) { visibility: hidden; }
+.pilot-preparation {
+  position: absolute;
+  inset: 0;
+  z-index: 42;
+  display: grid;
+  place-items: center;
+  background: #132338;
+  color: #dbeafa;
+  font-size: 1rem;
+  font-weight: 700;
+}
 
 .pilot-stage-image, .pilot-intro {
   width: 100%;
@@ -3061,7 +3091,9 @@ kbd {
   pointer-events: none;
 }
 .pilot-stage-image { z-index: -1; }
-.pilot-intro { z-index: 43; background: #132338; }
+.pilot-intro { z-index: 41; background: #132338; }
+.pilot-video-playing > .pilot-intro { z-index: 43; }
+.pilot-video-playing > .pilot-preparation { visibility: hidden; }
 .pilot-skip {
   position: absolute;
   right: 14px;
@@ -3078,7 +3110,6 @@ kbd {
   cursor: pointer;
 }
 .pilot-skip:focus-visible { outline: 3px solid #9fefff; outline-offset: 2px; }
-.pilot-introducing > :is(.fighter,.stage-banner) { visibility: hidden; }
 .pilot-stage-image[hidden], .pilot-projectile[hidden],
 .pilot-model > img[hidden] { display: none; }
 
@@ -3092,7 +3123,7 @@ kbd {
 .stage[data-pilot="ready"] { container-type: inline-size; }
 .stage[data-pilot="ready"] .pilot-model.left { left: 12%; }
 .stage[data-pilot="ready"] .pilot-model.right { right: 12%; }
-.pilot-model > :is(svg,.expression,.pose-icon) { display: none; }
+.pilot-model > :is(.fighter-figure,.expression,.pose-icon) { display: none; }
 .pilot-model.pilot-has-barrier > :is(.guard-barrier,.shield-bubble) { display: none; }
 .pilot-model > .pilot-fighter {
   position: absolute;
@@ -3102,7 +3133,7 @@ kbd {
   top: calc(100% - var(--pilot-ground));
   left: 50%;
   transform-origin: 50% 85.32%;
-  transform: translate(-50%,-85.32%);
+  transform: translate(-50%,-85.32%) scaleX(var(--art-facing, 1));
   filter: drop-shadow(0 9px 7px rgba(8,17,28,.34));
   pointer-events: none;
 }
@@ -3136,7 +3167,7 @@ kbd {
 .pilot-projectile[data-pilot-fx="meteor"] { width: clamp(66px, 17cqw, 162px); }
 
 @media (max-width: 600px) {
-  .stage[data-pilot="ready"] { height: clamp(245px, 70vw, 360px); }
+  .stage:is([data-pilot="loading"],[data-pilot="ready"]) { height: clamp(245px, 70vw, 360px); }
   .stage[data-pilot="ready"] .pilot-model { --pilot-size: 44cqw; bottom: 14%; }
   .stage[data-pilot="ready"] .pilot-model.left { left: 4%; }
   .stage[data-pilot="ready"] .pilot-model.right { right: 4%; }
@@ -3157,4 +3188,32 @@ kbd {
 .result-portrait > .roster-render { max-width: 144px; max-height: 144px; }
 .pilot-projectile {
   width: clamp(55px, calc(16cqw * var(--pilot-scale,1)), calc(144px * var(--pilot-scale,1)));
+}
+
+/* Match options live outside the mode button group so native select semantics
+   and platform keyboard controls stay intact. */
+.arena-chooser:not([hidden]) {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: .55rem .75rem;
+  margin: 0 auto 1.15rem;
+  padding-inline: .6rem;
+}
+.arena-chooser label {
+  color: #d5e3f5;
+  font-weight: 700;
+  font-size: .9rem;
+}
+.arena-chooser select {
+  min-width: 10.5rem;
+  min-height: 44px;
+  padding: .55rem .65rem;
+  border: 1px solid #506075;
+  border-radius: .6rem;
+  background: #131d2e;
+  color: #f2f6ff;
+  cursor: pointer;
+  color-scheme: dark;
 }
