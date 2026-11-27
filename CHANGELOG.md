@@ -2,6 +2,14 @@
 
 本專案遵循 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.1.0/) 格式，版本號採用 [Semantic Versioning](https://semver.org/lang/zh-TW/)。
 
+## [10.4.0] — 2026-11-28
+
+### Changed
+
+- 四座擂台的 1920×1128 預渲染底圖全部換新：雪山極光觀測台、玻璃港潮鐘、竹影雙鶴錦幕、雷鼓台雙龍鼓。
+- 同步換新每座擂台三條開場路徑，保留 WebM 和 MP4 備援、減少動態效果與跳過功能。影片末段與新底圖對齊。
+- 透光招式、出招音效、角色站位及戰鬥數值維持原樣。
+
 ## [Unreleased]
 
 ### Changed

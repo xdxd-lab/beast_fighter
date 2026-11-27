@@ -6,7 +6,7 @@
 Turn-based mind games, arcade-fighter presentation — runs in any modern browser, zero install.
 
 [![CI](https://github.com/xdxd-lab/beast_fighter/actions/workflows/ci.yml/badge.svg)](https://github.com/xdxd-lab/beast_fighter/actions/workflows/ci.yml)
-![Version](https://img.shields.io/badge/version-10.0.0-ffd45c)
+![Version](https://img.shields.io/badge/version-10.4.0-ffd45c)
 ![Dependencies](https://img.shields.io/badge/runtime%20dependencies-0-58e08f)
 
 ### ▶ [立即遊玩 xdxd-lab.github.io/beast_fighter](https://xdxd-lab.github.io/beast_fighter/)
@@ -42,7 +42,7 @@ Turn-based mind games, arcade-fighter presentation — runs in any modern browse
 | 無障礙 | 全程可用鍵盤操作、對話框焦點管理、`aria-live` 戰鬥紀錄、遵循「減少動態效果」系統設定 |
 | 觸控 | 觸控漣漪與多點編號回饋（沿用 MultiTouchKit `mtk-viewer` 的視覺風格），手機版面最窄支援 390 px |
 | 工程 | 純邏輯戰鬥引擎與畫面分離、可重現的亂數種子、Node 單元測試＋無頭瀏覽器端到端測試、GitHub Actions CI |
-| 部署 | 無建置步驟、無外部套件、無音檔與圖片下載；GitHub Pages 直接提供靜態檔案，下載後也能離線遊玩 |
+| 部署 | 無建置步驟、無外部套件、GitHub Pages 直接提供靜態圖包與當場擂台媒體；離線可用經典畫面遊玩 |
 
 <table>
   <tr>
@@ -67,7 +67,7 @@ cd beast_fighter
 python3 -m http.server 8000   # 然後開啟 http://localhost:8000
 ```
 
-也可以直接用瀏覽器開啟 `index.html`。所有腳本都是傳統 `<script src>`，不使用 ES modules 或 `fetch`，因此 `file://` 也能正常運作。
+也可以直接用瀏覽器開啟 `index.html`。經典畫面支援 `file://`；新版美術以 HTTP(S) 載入圖包，請使用上方的本機伺服器。
 
 **離線遊玩**：在 GitHub 按 **Code → Download ZIP**，解壓後開啟 `index.html`。V10 起程式拆成多個檔案，請保留整個資料夾，不要只複製 `index.html`。
 

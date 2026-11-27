@@ -24,6 +24,9 @@
     guard: ['shared-guard', 0.62],
   };
   const prefix = 'assets/pilot/';
+  // Version the stage and both video sources together so older cached artwork
+  // cannot reappear at the transition from the opening into a new arena.
+  const arenaMedia = path => path + '?v=10.4.0';
   const ASSET_WAIT = 6500, INTRO_START_WAIT = 2400, INTRO_PLAY_WAIT = 3200;
   const fighterPath = (fighter, pose) =>
     'fighters/' + fighter.character.id + '-' + (fighter.paletteIndex ? 'b' : 'a') + '-' + pose;
@@ -92,7 +95,7 @@
       node.decoding = 'async';
       const entry = { ok: false, url: '', promise: Promise.resolve(false) };
       images.set(key, entry);
-      const source = key === 'stage' ? Promise.resolve(arena.still) : Art.asset(key);
+      const source = key === 'stage' ? Promise.resolve(arenaMedia(arena.still)) : Art.asset(key);
       entry.promise = source.then(async (url) => {
         if (!url || signal.aborted) return false;
         entry.url = url;
@@ -194,7 +197,7 @@
         const formats = [['video/webm; codecs="vp9"', intro.webm], ['video/mp4', intro.mp4]];
         for (const [type, path] of formats) {
           const source = document.createElement('source');
-          source.type = type; source.src = path; video.append(source);
+          source.type = type; source.src = arenaMedia(path); video.append(source);
         }
         video.className = 'pilot-intro';
         video.muted = true; video.playsInline = true; video.preload = 'auto';
