@@ -38,6 +38,10 @@ jobs:
         env:
           CI: 'true'
         run: python3 scripts/qa/smoke_test.py --shots qa-shots
+      - name: Check cold 3D loads and inward-facing portraits
+        env:
+          CI: 'true'
+        run: python3 scripts/qa/pilot_view_test.py
       - name: Upload screenshots
         if: always()
         uses: actions/upload-artifact@v4

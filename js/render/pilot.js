@@ -5,6 +5,7 @@
 (function (root) {
   'use strict';
   const Art = root.BeastBrawl.ReleaseArt;
+  const Arenas = root.BeastBrawl.Arenas;
   const IDS = new Set(Art.fighterIds);
   const POSE_FILE = { idle: 'idle', ready: 'idle', charge: 'cast', release: 'cast',
     strike: 'cast', recover: 'idle', hit: 'hit', guard: 'defend', ko: 'ko', victory: 'idle' };
@@ -22,6 +23,7 @@
     guard: ['shared-guard', 0.62],
   };
   const prefix = 'assets/pilot/';
+  const ASSET_WAIT = 6500, INTRO_START_WAIT = 2400, INTRO_PLAY_WAIT = 3200;
   const fighterPath = (fighter, pose) =>
     'fighters/' + fighter.character.id + '-' + (fighter.paletteIndex ? 'b' : 'a') + '-' + pose;
   const skillBarrier = (skill) => skill.type === 'guard' ? 'guard' :
@@ -37,6 +39,7 @@
     return node;
   }
   function activate(stage, fighterNodes, fighters, options) {
+    const arena = Arenas.get(options.arena?.id);
     const images = new Map();
     const lifetime = new AbortController();
     const { signal } = lifetime;
@@ -52,32 +55,49 @@
     });
     const background = img('pilot-stage-image');
     const projectile = img('pilot-projectile');
+    const preparation = document.createElement('div');
+    preparation.className = 'pilot-preparation';
+    preparation.setAttribute('role', 'status');
+    preparation.textContent = '準備擂台與角色…';
     background.hidden = projectile.hidden = true;
+    stage.dataset.pilot = 'loading';
     stage.prepend(background);
-    stage.append(projectile);
+    stage.append(projectile, preparation);
     let ready = false;
 
-    // Loading stays scoped to this matchup, and only the two idle figures and
-    // stage block the handoff. Missing individual assets keep their classic art.
+    function makeDisplayable(node, url) {
+      if (typeof node.decode === 'function') {
+        node.src = url;
+        return node.decode().then(() => node.naturalWidth > 0, () => false);
+      }
+      return new Promise((resolve) => {
+        const finish = (ok) => {
+          node.onload = node.onerror = null;
+          signal.removeEventListener('abort', abort);
+          resolve(ok);
+        };
+        const abort = () => finish(false);
+        node.onload = () => finish(node.naturalWidth > 0);
+        node.onerror = abort;
+        signal.addEventListener('abort', abort, { once: true });
+        node.src = url;
+      });
+    }
+
+    // Critical assets are decoded on the actual stage nodes. The cover stays
+    // up until the complete scene (or an intentional fallback) can be shown.
     function prime(key, node = new Image()) {
       if (images.has(key)) return images.get(key).promise;
       node.decoding = 'async';
       const entry = { ok: false, url: '', promise: Promise.resolve(false) };
       images.set(key, entry);
-      entry.promise = new Promise((resolve) => {
-        const finish = (ok) => {
-          if (!images.get(key) || images.get(key) !== entry) return resolve(false);
-          entry.ok = ok && !signal.aborted;
-          resolve(entry.ok);
-        };
-        node.onload = () => { node.onload = node.onerror = null; finish(true); };
-        node.onerror = () => { node.onload = node.onerror = null; finish(false); };
-        void Art.asset(key).then(url => {
-          if (!url || signal.aborted) return finish(false);
-          entry.url = url;
-          node.src = url;
-        }, () => finish(false));
-      });
+      const source = key === 'stage' ? Promise.resolve(arena.still) : Art.asset(key);
+      entry.promise = source.then(async (url) => {
+        if (!url || signal.aborted) return false;
+        entry.url = url;
+        entry.ok = await makeDisplayable(node, url) && !signal.aborted;
+        return entry.ok;
+      }).catch(() => false);
       return entry.promise;
     }
     const has = (key) => ready && images.get(key)?.ok;
@@ -166,10 +186,10 @@
       return new Promise((resolve) => {
         if (signal.aborted || options.skipIntro() || document.hidden) return resolve();
         const video = document.createElement('video');
-        const formats = [['video/webm; codecs="vp9"', 'intro.webm'], ['video/mp4', 'intro.mp4']];
+        const formats = [['video/webm; codecs="vp9"', arena.webm], ['video/mp4', arena.mp4]];
         for (const [type, path] of formats) {
           const source = document.createElement('source');
-          source.type = type; source.src = prefix + path; video.append(source);
+          source.type = type; source.src = path; video.append(source);
         }
         video.className = 'pilot-intro';
         video.muted = true; video.playsInline = true; video.preload = 'auto';
@@ -183,6 +203,7 @@
         };
         const onVisibility = () => { if (document.hidden) done(); };
         let completed = false;
+        let timeout;
         const done = () => {
           if (completed) return;
           completed = true;
@@ -191,10 +212,18 @@
           document.removeEventListener('visibilitychange', onVisibility);
           clearTimeout(timeout);
           video.pause(); video.replaceChildren(); video.load(); video.remove(); skip.remove();
-          stage.classList.remove('pilot-introducing');
+          stage.classList.remove('pilot-video-playing');
           resolve();
         };
-        const timeout = setTimeout(done, 2700);
+        const onPlaying = () => {
+          if (completed) return;
+          // Keep the neutral cover above the video until it can show a frame.
+          stage.classList.add('pilot-video-playing');
+          clearTimeout(timeout);
+          timeout = setTimeout(done, INTRO_PLAY_WAIT);
+        };
+        timeout = setTimeout(done, INTRO_START_WAIT);
+        video.addEventListener('playing', onPlaying, { once: true });
         video.addEventListener('ended', done, { once: true });
         video.addEventListener('error', done, { once: true });
         video.lastElementChild?.addEventListener('error', done, { once: true });
@@ -202,45 +231,53 @@
         signal.addEventListener('abort', done, { once: true });
         document.addEventListener('keydown', onKey, true);
         document.addEventListener('visibilitychange', onVisibility);
-        stage.classList.add('pilot-introducing');
         stage.append(video, skip);
-        video.play().catch(done);
+        try { void Promise.resolve(video.play()).catch(done); }
+        catch { done(); }
       });
     }
     async function prepare() {
-      stage.dataset.pilot = 'loading';
       const keys = fighters.map(f => fighterPath(f, 'idle'));
-      const critical = Promise.all([prime('stage', background), ...keys.map(k => prime(k))]).then(r => r.every(Boolean));
+      const critical = Promise.all([prime('stage', background), ...keys.map((k, side) => prime(k, layers[side].actor))])
+        .then(r => r.every(Boolean));
+      if (!(await deadline(ASSET_WAIT, critical, false)) || signal.aborted) return false;
+
+      // The cast packs are already present. Decode poses while the movie can
+      // play, but let the movie use the network before optional FX/audio.
+      const poseWarm = fighters.flatMap(f => ['cast', 'hit', 'defend', 'ko'].map(p => fighterPath(f,p)));
+      poseWarm.forEach(k => void prime(k));
+      ready = true;
+      background.hidden = false;
+      fighterNodes.forEach((el, side) => {
+        setPose(side, pose[side]); layers[side].actor.hidden = false; el.classList.add('pilot-model');
+      });
+      await playIntro();
+      if (signal.aborted) return false;
+      preparation.remove();
+      stage.dataset.pilot = 'ready';
+      stage.dataset.arena = arena.id;
+      root.document.documentElement.dataset.art = '3d';
+
       // Shield overlays are useful even for bear mirrors (guard), but do not
       // download the unused jelly-specific shields or sound bundle.
       const jelly = fighters.some(f => f.character.id === 'jelly');
       const bear = fighters.some(f => f.character.id === 'bear');
       const barrierWarm = (jelly ? BARRIERS : ['guard']).flatMap(k => ['back', 'front'].map(v => 'fx/' + k + '-' + v));
-      const poseWarm = fighters.flatMap(f => ['cast', 'hit', 'defend', 'ko'].map(p => fighterPath(f,p)));
       const audioKinds = ['guard', ...(bear ? ['cast','hit','partial','block'] : []), ...(jelly ? ['shield','fortress'] : [])];
-      [...poseWarm, ...barrierWarm, ...Art.keysFor(fighters).map(k => 'fx/' + k)].forEach(k => void prime(k));
-      if (!(await deadline(1850, critical, false)) || signal.aborted) return false;
-      ready = true;
-      stage.dataset.pilot = 'ready';
-      root.document.documentElement.dataset.art = '3d';
-      background.hidden = false;
-      fighterNodes.forEach((el, side) => {
-        setPose(side, pose[side]); layers[side].actor.hidden = false; el.classList.add('pilot-model');
-      });
-
+      [...barrierWarm, ...Art.keysFor(fighters).map(k => 'fx/' + k)].forEach(k => void prime(k));
       audioKinds.forEach(k => options.audio.preloadSample(prefix + 'sfx/' + FILES[k][0] + '.mp3'));
-      await playIntro();
-      return !signal.aborted;
+      return true;
     }
     function dispose() {
       if (signal.aborted) return;
       lifetime.abort();
       ready = false;
-      background.remove(); projectile.remove();
+      background.remove(); projectile.remove(); preparation.remove();
       layers.forEach(part => Object.values(part).forEach(node => node.remove()));
       fighterNodes.forEach(el => { el.classList.remove('pilot-model','pilot-has-barrier'); delete el.dataset.pilotBarrier; });
       delete stage.dataset.pilot;
-      stage.classList.remove('pilot-introducing');
+      delete stage.dataset.arena;
+      stage.classList.remove('pilot-video-playing');
       root.document.documentElement.dataset.art = 'classic';
       images.clear();
     }
