@@ -46,3 +46,17 @@ test('visible release label matches the declared build version', () => {
   const html = require('node:fs').readFileSync(require('node:path').resolve(__dirname, '../index.html'), 'utf8');
   assert.ok(html.includes('Beast Brawl · v' + require('../package.json').version + '</span>'));
 });
+
+test('refreshed arena stills are native-sized WebP within the per-arena budget', () => {
+  const fs = require('node:fs'), path = require('node:path');
+  for (const arena of Arenas.list) {
+    const data = fs.readFileSync(path.resolve(__dirname, '..', arena.still));
+    assert.ok(data.length <= 250000, arena.id);
+    assert.equal(data.toString('ascii', 0, 4), 'RIFF', arena.id);
+    assert.equal(data.toString('ascii', 8, 16), 'WEBPVP8 ', arena.id);
+    // Lossy WebP stores the canvas dimensions in its VP8 keyframe header.
+    assert.equal(data.readUIntLE(23, 3), 0x2a019d, arena.id);
+    assert.equal(data.readUInt16LE(26) & 0x3fff, 1920, arena.id);
+    assert.equal(data.readUInt16LE(28) & 0x3fff, 1128, arena.id);
+  }
+});
