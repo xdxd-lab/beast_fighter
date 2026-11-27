@@ -545,6 +545,7 @@
   let wanted = null;        // music track requested before unlock
   let timer = null;
   let settings = null;
+  const sampleBuffers = new Map();
 
   function applyVolumes() {
     if (!engine || !settings) return;
@@ -621,6 +622,52 @@
     skill(skill, phase, opts) {
       if (!Audio.ready || (settings && settings.get('muted'))) return;
       try { engine.playSkill(skill, phase, opts); } catch (e) { /* ignore */ }
+    },
+
+    /**
+     * Warms only the short original pilot effects for this matchup. Buffers
+     * attach to the existing FX bus so volume, mute and compressor still apply.
+     */
+    preloadSample(url) {
+      if (!engine || sampleBuffers.has(url)) return;
+      const { ctx } = engine;
+      let outstanding = true;
+      const finish = (buffer) => {
+        if (outstanding) sampleBuffers.set(url, buffer);
+      };
+      sampleBuffers.set(url, null);
+      const ctrl = new AbortController();
+      const timeout = setTimeout(() => { outstanding = false; ctrl.abort(); }, 3000);
+      fetch(url, { signal: ctrl.signal }).then(response => {
+        if (!response.ok) throw new Error('sample unavailable');
+        return response.arrayBuffer();
+      }).then(data => ctx.decodeAudioData(data)).then(finish).catch(() => {}).finally(() => {
+        clearTimeout(timeout);
+        if (!sampleBuffers.get(url)) sampleBuffers.delete(url);
+      });
+    },
+
+    playSample(url, { gain = 0.7, pan = 0 } = {}) {
+      if (!Audio.ready || (settings && settings.get('muted'))) return false;
+      const buffer = sampleBuffers.get(url);
+      if (!buffer) return false;
+      try {
+        const { ctx, sfxBus } = engine;
+        const source = ctx.createBufferSource();
+        const level = ctx.createGain();
+        const stereo = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+        source.buffer = buffer;
+        level.gain.value = gain / SFX_TRIM; // master WAVs have known loudness; don't apply synth calibration twice
+        source.connect(level);
+        if (stereo) {
+          stereo.pan.value = pan;
+          level.connect(stereo);
+          stereo.connect(sfxBus);
+        } else level.connect(sfxBus);
+        source.onended = () => { source.disconnect(); level.disconnect(); stereo?.disconnect(); };
+        source.start();
+        return true;
+      } catch (e) { return false; }
     },
 
     /**
