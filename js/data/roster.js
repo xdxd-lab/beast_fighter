@@ -83,11 +83,11 @@
     {
       id: 'jelly', name: '璃璃', animal: '水母', job: '重裝聖騎士',
       hp: 128, mp: 92, atk: 9, def: 14, spd: 6,
-      passive: '無骨重甲：所有專屬護盾效果 +30%；每次再行動時，剩餘護盾流失 20%。攻擊命中時釋放一半護盾蓄電，其中八成化為追加傷害。全隊最柔軟、沒有骨頭，卻是最難打穿的防線。',
+      passive: '無骨重甲：每次再行動時，剩餘護盾流失 20%。攻擊命中時釋放一半護盾蓄電，其中八成化為追加傷害。全隊最柔軟、沒有骨頭，卻是最難打穿的防線。',
       skills: [
         { id: 'basic', name: '麻麻聖光', cost: 0, desc: '用溫和表情放出一發麻痺電光', type: 'magic', power: 13, acc: 98, fx: 'electric' },
-        { id: 's1', name: '水晶聖盾', cost: 16, desc: '展開透明水膜，獲得 24 點基礎護盾', type: 'shield', power: 24, acc: 100, fx: 'bubble' },
-        { id: 's2', name: '不動水母城', cost: 28, desc: '堆疊大型結界，獲得 40 點基礎護盾', type: 'shield', power: 40, acc: 100, fx: 'bubble' },
+        { id: 's1', name: '水晶聖盾', cost: 16, desc: '展開透明水膜，獲得 32 點護盾', type: 'shield', power: 32, acc: 100, fx: 'bubble' },
+        { id: 's2', name: '不動水母城', cost: 28, desc: '堆疊大型結界，獲得 52 點護盾', type: 'shield', power: 52, acc: 100, fx: 'bubble' },
       ],
       colors: [['#eef7d4', '#8dcfe9', '#5a78cf'], ['#ffd7ee', '#c7a8ef', '#7858b6']],
     },

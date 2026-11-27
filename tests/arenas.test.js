@@ -3,7 +3,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const Arenas = require('../js/render/arenas.js');
 
-test('arena selection has one stable default and three original scenery choices', () => {
+test('arena art resolves exactly four approved scene paths', () => {
   assert.deepEqual(Arenas.list.map(x => [x.id, x.label]), [
     ['snow', '雪山擂台'],
     ['tide-harbor', '潮汐玻璃港'],
@@ -20,9 +20,25 @@ test('arena selection has one stable default and three original scenery choices'
   assert.ok(Object.isFrozen(Arenas.list));
 });
 
-test('an absent or untrusted query cannot generate a network path', () => {
-  for (const bad of [null, undefined, '', 'unknown', '../../index.html', '__proto__', 'constructor', 'TIDE-HARBOR']) {
-    assert.strictEqual(Arenas.get(bad), Arenas.list[0]);
+test('an absent or unknown query defaults to random without allowing an arbitrary path', () => {
+  for (const bad of [null, undefined, '', 'unknown', '../../index.html', '__proto__', 'constructor', 'TIDE-HARBOR', 'random']) {
+    assert.equal(Arenas.choiceId(bad), Arenas.randomId);
+    assert.strictEqual(Arenas.resolve(bad, () => .76), Arenas.list[3]);
+    assert.strictEqual(Arenas.get(bad), Arenas.list[0]); // renderer fallback
+  }
+  for (const arena of Arenas.list) {
+    assert.equal(Arenas.choiceId(arena.id), arena.id);
+    assert.strictEqual(Arenas.resolve(arena.id, () => assert.fail('fixed arena must not draw')), arena);
+  }
+});
+
+test('a random match uses one draw over four equal intervals', () => {
+  const samples = [0, .249999999, .25, .499999999, .5, .749999999, .75, .999999999];
+  for (const [i, value] of samples.entries()) {
+    let calls = 0;
+    const result = Arenas.resolve(Arenas.randomId, () => { calls++; return value; });
+    assert.strictEqual(result, Arenas.list[Math.floor(i / 2)]);
+    assert.equal(calls, 1);
   }
 });
 

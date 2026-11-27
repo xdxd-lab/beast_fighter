@@ -129,7 +129,7 @@ main {
 
 .setup-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2,minmax(0,1fr));
   gap: 16px;
 }
 
@@ -197,7 +197,7 @@ main {
 
 .roster {
   display: grid;
-  grid-template-columns: repeat(3,1fr);
+  grid-template-columns: repeat(3,minmax(0,1fr));
   gap: 9px;
   padding: 14px;
 }
@@ -232,8 +232,8 @@ main {
 }
 
 .portrait svg {
-  width: 110px;
-  height: 110px;
+  width: min(110px,100%);
+  height: auto;
 }
 
 .char-card h3 {
@@ -251,9 +251,16 @@ main {
 
 .fighter-detail {
   display: grid;
-  grid-template-columns: 170px 1fr;
+  grid-template-columns: 170px minmax(0,1fr);
   gap: 16px;
   padding: 16px;
+}
+
+/* Do not let intrinsic text/badge widths expand the detail grid or be
+   clipped by the rounded panel at phone widths. */
+.fighter-detail .detail {
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
 }
 
 .big-portrait {
@@ -266,8 +273,8 @@ main {
 }
 
 .big-portrait svg {
-  width: 185px;
-  height: 185px;
+  width: min(185px,100%);
+  height: auto;
 }
 
 .detail h3 {
@@ -291,7 +298,7 @@ main {
 
 .stats {
   display: grid;
-  grid-template-columns: repeat(5,1fr);
+  grid-template-columns: repeat(auto-fit,minmax(min(100%,64px),1fr));
   gap: 7px;
 }
 
@@ -313,6 +320,7 @@ main {
 
 .palette-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   align-items: center;
   margin-top: 12px;
@@ -1943,23 +1951,17 @@ main {
 
 @media (max-width: 900px) {
   .setup-grid {
-    grid-template-columns: 1fr;
-  }
-  .roster {
-    grid-template-columns: repeat(3,minmax(88px,1fr));
+    grid-template-columns: minmax(0,1fr);
   }
   .fighter-detail {
-    grid-template-columns: 125px 1fr;
+    grid-template-columns: 125px minmax(0,1fr);
   }
   .big-portrait {
     height: 150px;
   }
   .big-portrait svg {
-    width: 145px;
-    height: 145px;
-  }
-  .stats {
-    grid-template-columns: repeat(2,1fr);
+    width: min(145px,100%);
+    height: auto;
   }
   .stage {
     height: 410px;
@@ -2037,7 +2039,7 @@ main {
     font-size: 42px;
   }
   .fighter-detail {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0,1fr);
   }
   .big-portrait {
     height: 150px;
@@ -2463,12 +2465,13 @@ kbd {
   margin: 10px 0 0;
   padding: 0;
   display: grid;
+  grid-template-columns: minmax(0,1fr);
   gap: 6px;
 }
 
 .skill-list li {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: max-content minmax(0,1fr) max-content;
   gap: 2px 8px;
   align-items: center;
   padding: 7px 9px;
@@ -2982,13 +2985,6 @@ kbd {
     flex-wrap: wrap;
   }
 
-  .skill-list {
-    display: none;
-  }
-
-  .stats {
-    grid-template-columns: repeat(3, 1fr);
-  }
 
   .status {
     font-size: 9px;
@@ -3190,30 +3186,67 @@ kbd {
   width: clamp(55px, calc(16cqw * var(--pilot-scale,1)), calc(144px * var(--pilot-scale,1)));
 }
 
-/* Match options live outside the mode button group so native select semantics
-   and platform keyboard controls stay intact. */
-.arena-chooser:not([hidden]) {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-items: center;
-  gap: .55rem .75rem;
-  margin: 0 auto 1.15rem;
-  padding-inline: .6rem;
-}
-.arena-chooser label {
-  color: #d5e3f5;
-  font-weight: 700;
-  font-size: .9rem;
-}
-.arena-chooser select {
-  min-width: 10.5rem;
-  min-height: 44px;
-  padding: .55rem .65rem;
-  border: 1px solid #506075;
-  border-radius: .6rem;
+/* Keep all match settings in view, with a real native radio in every tile. */
+.arena-chooser {
+  min-inline-size: 0;
+  margin: 0 0 1.15rem;
+  padding: .65rem .75rem .8rem;
+  border: 1px solid #4b5c75;
+  border-radius: .85rem;
   background: #131d2e;
+}
+.arena-chooser legend {
+  padding-inline: .35rem;
+  color: #f2f6ff;
+  font-weight: 800;
+  font-size: .95rem;
+}
+.arena-hint {
+  margin: 0 0 .6rem;
+  color: #b4c6de;
+  font-size: .82rem;
+  line-height: 1.45;
+}
+.arena-options {
+  display: grid;
+  grid-template-columns: repeat(5,minmax(0,1fr));
+  gap: .48rem;
+}
+.arena-option {
+  display: flex;
+  align-items: center;
+  gap: .48rem;
+  min-height: 44px;
+  padding: .42rem .55rem;
+  border: 1px solid #5a6e8b;
+  border-radius: .6rem;
+  background: #1c2a40;
   color: #f2f6ff;
   cursor: pointer;
-  color-scheme: dark;
+  touch-action: manipulation;
+  font-weight: 700;
+  font-size: .86rem;
+  line-height: 1.35;
+}
+.arena-option input {
+  flex: 0 0 auto;
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  accent-color: #8fe5ff;
+  cursor: inherit;
+}
+.arena-option:hover { background: #283d57; }
+.arena-option:has(input:checked) {
+  border-color: #8fe5ff;
+  background: #223e56;
+}
+.arena-option:has(input:focus-visible) {
+  outline: 3px solid var(--gold);
+  outline-offset: 1px;
+}
+.arena-option:has(input:focus-visible) input { outline: none; }
+@media (max-width: 760px) {
+  .arena-options { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .arena-option:first-child { grid-column: 1 / -1; }
 }

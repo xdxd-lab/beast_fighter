@@ -6,6 +6,7 @@
   'use strict';
   const Art = root.BeastBrawl.ReleaseArt;
   const Arenas = root.BeastBrawl.Arenas;
+  const Intros = root.BeastBrawl.Intros;
   const IDS = new Set(Art.fighterIds);
   const POSE_FILE = { idle: 'idle', ready: 'idle', charge: 'cast', release: 'cast',
     strike: 'cast', recover: 'idle', hit: 'hit', guard: 'defend', ko: 'ko', victory: 'idle' };
@@ -186,7 +187,11 @@
       return new Promise((resolve) => {
         if (signal.aborted || options.skipIntro() || document.hidden) return resolve();
         const video = document.createElement('video');
-        const formats = [['video/webm; codecs="vp9"', arena.webm], ['video/mp4', arena.mp4]];
+        // Keep the original angle for QA/share links only when explicitly chosen.
+        const requested = new URLSearchParams(root.location.search).get('introStyle');
+        const intro = Intros.choose(arena, requested);
+        stage.dataset.introStyle = intro.id;
+        const formats = [['video/webm; codecs="vp9"', intro.webm], ['video/mp4', intro.mp4]];
         for (const [type, path] of formats) {
           const source = document.createElement('source');
           source.type = type; source.src = path; video.append(source);
@@ -277,6 +282,7 @@
       fighterNodes.forEach(el => { el.classList.remove('pilot-model','pilot-has-barrier'); delete el.dataset.pilotBarrier; });
       delete stage.dataset.pilot;
       delete stage.dataset.arena;
+      delete stage.dataset.introStyle;
       stage.classList.remove('pilot-video-playing');
       root.document.documentElement.dataset.art = 'classic';
       images.clear();
