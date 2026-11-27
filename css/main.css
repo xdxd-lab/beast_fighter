@@ -3044,3 +3044,117 @@ kbd {
     margin-left: 0;
   }
 }
+
+/* Pilot: pre-rendered landscape and transparent layers; classic art stays default. */
+.stage[data-pilot="ready"] { background: #132338; }
+.stage[data-pilot="ready"] > :is(.moon,.city,.floor,.versus),
+.stage[data-pilot="ready"]::before,
+.stage[data-pilot="ready"]::after { display: none; }
+
+.pilot-stage-image, .pilot-intro {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  inset: 0;
+  object-fit: cover;
+  object-position: 50% 66%;
+  pointer-events: none;
+}
+.pilot-stage-image { z-index: -1; }
+.pilot-intro { z-index: 43; background: #132338; }
+.pilot-skip {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  z-index: 44;
+  min-height: 44px;
+  border: 1px solid rgba(226,241,255,.48);
+  border-radius: 999px;
+  padding: 0 16px;
+  background: #081725;
+  color: #effaff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.pilot-skip:focus-visible { outline: 3px solid #9fefff; outline-offset: 2px; }
+.pilot-introducing > :is(.fighter,.stage-banner) { visibility: hidden; }
+.pilot-stage-image[hidden], .pilot-projectile[hidden],
+.pilot-model > img[hidden] { display: none; }
+
+.stage[data-pilot="ready"] .pilot-model {
+  --pilot-size: min(33cqw, 274px);
+  --pilot-ground: 5%;
+  width: var(--pilot-size);
+  height: var(--pilot-size);
+  bottom: 13%;
+}
+.stage[data-pilot="ready"] { container-type: inline-size; }
+.stage[data-pilot="ready"] .pilot-model.left { left: 12%; }
+.stage[data-pilot="ready"] .pilot-model.right { right: 12%; }
+.pilot-model > :is(svg,.expression,.pose-icon) { display: none; }
+.pilot-model.pilot-has-barrier > :is(.guard-barrier,.shield-bubble) { display: none; }
+.pilot-model > .pilot-fighter {
+  position: absolute;
+  z-index: 1;
+  width: 100%;
+  height: auto;
+  top: calc(100% - var(--pilot-ground));
+  left: 50%;
+  transform-origin: 50% 85.32%;
+  transform: translate(-50%,-85.32%);
+  filter: drop-shadow(0 9px 7px rgba(8,17,28,.34));
+  pointer-events: none;
+}
+.pilot-model > .nameplate { z-index: 5; bottom: -13px; }
+.pilot-model > .pilot-overlay {
+  position: absolute;
+  width: 99%;
+  max-width: none;
+  height: auto;
+  top: calc(100% - var(--pilot-ground));
+  left: 50%;
+  transform: translate(calc(-1 * var(--pilot-pivot-x)),calc(-1 * var(--pilot-pivot-y)));
+  pointer-events: none;
+}
+.pilot-model > .pilot-overlay-back { z-index: 0; }
+.pilot-model > .pilot-overlay-front { z-index: 2; }
+.pilot-model[data-pilot-barrier="shield"] > .pilot-overlay { width: 95%; top: calc(100% - 8%); }
+.pilot-model[data-pilot-barrier="fortress"] > .pilot-overlay { width: 124%; }
+.pilot-model[data-pilot-barrier="guard"] > .pilot-overlay { width: 109%; }
+.pilot-model.shield-hit > .pilot-overlay-front { filter: brightness(1.28); }
+.pilot-projectile {
+  position: absolute;
+  z-index: 10;
+  width: clamp(58px, 16cqw, 144px);
+  max-width: none;
+  transform-origin: var(--pilot-pivot-x) var(--pilot-pivot-y);
+  transform: translate(calc(-1 * var(--pilot-pivot-x)),calc(-1 * var(--pilot-pivot-y))) scaleX(var(--pilot-dir,1));
+  pointer-events: none;
+}
+.pilot-projectile[data-pilot-fx="ember"] { width: clamp(34px, 10cqw, 87px); }
+.pilot-projectile[data-pilot-fx="meteor"] { width: clamp(66px, 17cqw, 162px); }
+
+@media (max-width: 600px) {
+  .stage[data-pilot="ready"] { height: clamp(245px, 70vw, 360px); }
+  .stage[data-pilot="ready"] .pilot-model { --pilot-size: 44cqw; bottom: 14%; }
+  .stage[data-pilot="ready"] .pilot-model.left { left: 4%; }
+  .stage[data-pilot="ready"] .pilot-model.right { right: 4%; }
+  .pilot-model > .nameplate { max-width: 96%; font-size: 11px; white-space: nowrap; }
+}
+
+/* Thumbnails, portraits and pre-rendered FX share the classic slot dimensions. */
+.portrait > .roster-render, .big-portrait > .roster-render,
+.cutin-art > .roster-render, .result-portrait > .roster-render {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+.portrait > .roster-render { max-width: 85px; max-height: 85px; }
+.big-portrait > .roster-render { max-width: 190px; max-height: 190px; }
+.cutin-art > .roster-render { max-width: 182px; max-height: 182px; }
+.result-portrait > .roster-render { max-width: 144px; max-height: 144px; }
+.pilot-projectile {
+  width: clamp(55px, calc(16cqw * var(--pilot-scale,1)), calc(144px * var(--pilot-scale,1)));
+}

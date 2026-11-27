@@ -49,7 +49,9 @@
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       for (let i = ripples.length - 1; i >= 0; i--) {
         const r = ripples[i];
-        const p = (now - r.start) / RIPPLE_MS;
+          // rAF supplies the frame's timestamp, which can precede a pointer
+          // event dispatched in that frame. Never draw a negative-radius ring.
+          const p = Math.max(0, (now - r.start) / RIPPLE_MS);
         if (p >= 1) { ripples.splice(i, 1); continue; }
         const radius = (reduced ? 16 : 20) + p * (reduced ? 18 : 40);
         ctx.strokeStyle = `hsla(${r.hue}, 80%, 62%, ${1 - p})`;
