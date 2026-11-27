@@ -25,3 +25,8 @@ test('an absent or untrusted query cannot generate a network path', () => {
     assert.strictEqual(Arenas.get(bad), Arenas.list[0]);
   }
 });
+
+test('visible release label matches the declared build version', () => {
+  const html = require('node:fs').readFileSync(require('node:path').resolve(__dirname, '../index.html'), 'utf8');
+  assert.ok(html.includes('Beast Brawl · v' + require('../package.json').version + '</span>'));
+});
